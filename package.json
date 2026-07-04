@@ -1,0 +1,46 @@
+{
+  "name": "react-qimen",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "奇门遁甲排盘 — 插件式多引擎架构，支持时家转盘（拆补/茅山/置闰/均分）与飞盘鸣法流派切换",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "3meta": "^2.6.0",
+    "bigfishmarquis-qimen": "^1.0.0",
+    "clsx": "^2.1.1",
+    "kinqimen": "^0.3.1",
+    "lucide-react": "^0.577.0",
+    "lunar-typescript": "^1.8.6",
+    "qimen-mingfa": "^1.0.28",
+    "qimendunjia-standalone": "^0.1.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tailwind-merge": "^3.5.0",
+    "taobi": "^0.4.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@tailwindcss/vite": "^4.2.1",
+    "@types/node": "^24.12.0",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "tailwindcss": "^4.2.1",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.48.0",
+    "vite": "^7.3.1",
+    "vitest": "^3.2.4"
+  }
+}

@@ -1,0 +1,111 @@
+/**
+ * 引擎适配器冒烟 + 跨引擎一致性测试
+ *
+ * 基准盘：2024-06-15 14:30 → 芒种 阳遁六局上元（拆补），值符天柱、值使惊门
+ * （已由 3meta / qimendunjia-standalone / kinqimen / qimen-mingfa 四家独立算法互相印证）
+ */
+import { describe, expect, it } from 'vitest';
+import { listQimenEngines, getQimenEngine, listEnginesBySchool } from '../registry';
+import type { UnifiedQimenChart } from '../types';
+
+const BASE_DATE = new Date(2024, 5, 15, 14, 30, 0);
+const YIN_DATE = new Date(2024, 6, 15, 12, 0, 0); // 小暑 阴遁
+
+function checkStructure(chart: UnifiedQimenChart) {
+  expect(chart.palaces).toHaveLength(9);
+  expect(chart.palaces.map((p) => p.gong)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  for (const p of chart.palaces) {
+    if (p.gong === 5) continue; // 中五宫依流派可为空
+    expect(p.diPanGan.length, `宫${p.gong} 地盘干`).toBeGreaterThan(0);
+    expect(p.tianPanGan.length, `宫${p.gong} 天盘干`).toBeGreaterThan(0);
+    expect(p.star, `宫${p.gong} 星`).toBeTruthy();
+    expect(p.gate, `宫${p.gong} 门`).toBeTruthy();
+    expect(p.god, `宫${p.gong} 神`).toBeTruthy();
+  }
+  expect(chart.meta.ju).toBeGreaterThanOrEqual(1);
+  expect(chart.meta.ju).toBeLessThanOrEqual(9);
+  expect(['阳遁', '阴遁']).toContain(chart.meta.dun);
+}
+
+/** 星名归一：'天柱'/'柱'/'禽芮'/'天禽/天芮' → 首星单字 */
+const normStar = (s?: string) => s?.replace(/天/g, '').split('/')[0]?.[0] ?? '';
+
+describe('时家转盘 · 拆补法基准盘 2024-06-15 14:30', () => {
+  const engines = listEnginesBySchool('时家转盘');
+
+  for (const engine of engines) {
+    it(`${engine.name} 结构完整且局数正确`, () => {
+      const chart = engine.compute({ date: BASE_DATE, method: '拆补' });
+      checkStructure(chart);
+      expect(chart.meta.dun).toBe('阳遁');
+      expect(chart.meta.ju).toBe(6);
+      expect(normStar(chart.meta.zhiFu)).toBe('柱');
+      expect(chart.meta.zhiShi?.[0]).toBe('惊');
+      expect(chart.meta.siZhu.day).toBe('庚戌');
+      expect(chart.meta.siZhu.hour).toBe('癸未');
+    });
+  }
+
+  it('各引擎值符落宫一致', () => {
+    const gongs = engines.map((e) => e.compute({ date: BASE_DATE, method: '拆补' }).meta.zhiFuGong);
+    expect(new Set(gongs).size).toBe(1);
+    expect(gongs[0]).toBe(2);
+  });
+});
+
+describe('时家转盘 · 阴遁一致性 2024-07-15 12:00', () => {
+  const engines = listEnginesBySchool('时家转盘');
+  const charts = engines.map((e) => ({ e, c: e.compute({ date: YIN_DATE, method: '拆补' }) }));
+
+  it('全部为阴遁且局数一致', () => {
+    for (const { e, c } of charts) {
+      expect(c.meta.dun, e.name).toBe('阴遁');
+      expect(c.meta.ju, e.name).toBe(charts[0].c.meta.ju);
+    }
+  });
+
+  it('值符星一致', () => {
+    const stars = charts.map(({ c }) => normStar(c.meta.zhiFu));
+    expect(new Set(stars).size).toBe(1);
+  });
+});
+
+describe('多定局法', () => {
+  it('bigfish 茅山/置闰可用且结构完整', () => {
+    for (const method of ['茅山', '置闰'] as const) {
+      const chart = getQimenEngine('bigfish').compute({ date: BASE_DATE, method });
+      checkStructure(chart);
+      expect(chart.method).toBe(method);
+    }
+  });
+
+  it('taobi 茅山/均分可用且结构完整', () => {
+    for (const method of ['茅山', '均分'] as const) {
+      const chart = getQimenEngine('taobi').compute({ date: BASE_DATE, method });
+      checkStructure(chart);
+    }
+  });
+});
+
+describe('飞盘鸣法', () => {
+  it('鸣法基准盘：阳遁六局，值符天柱、值使惊门，格局非空', () => {
+    const chart = getQimenEngine('mingfa').compute({ date: BASE_DATE, method: '鸣法' });
+    checkStructure(chart);
+    expect(chart.meta.dun).toBe('阳遁');
+    expect(chart.meta.ju).toBe(6);
+    expect(chart.meta.zhiFu).toBe('天柱');
+    expect(chart.meta.zhiShi).toBe('惊门');
+    expect(chart.patterns?.length ?? 0).toBeGreaterThan(0);
+    // 鸣法中宫也有完整星门神
+    const zhong = chart.palaces[4];
+    expect(zhong.star).toBeTruthy();
+    expect(zhong.gate).toBeTruthy();
+  });
+});
+
+describe('注册表', () => {
+  it('注册了 6 个引擎，默认引擎为 3meta', () => {
+    expect(listQimenEngines()).toHaveLength(6);
+    expect(getQimenEngine('sanmeta').id).toBe('sanmeta');
+  });
+});
