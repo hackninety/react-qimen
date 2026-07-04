@@ -47,10 +47,16 @@ function compute({ date, method }: ComputeInput): UnifiedQimenChart {
   }
   palaces.sort((a, b) => a.gong - b.gong);
 
-  // 值符 = 值符神落宫之星；值使 = 符首地盘所在宫的本位门
+  // 符首地盘落宫决定值符星与值使门；落中五宫时寄坤二（值符=天禽、值使=死门）
+  let fuShouGong = palaces.find((p) => p.gong !== 5 && p.diPanGan.includes(ctx.fuShou))?.gong;
+  let fuShouInCenter = false;
+  if (!fuShouGong && palaces[4].diPanGan.includes(ctx.fuShou)) {
+    fuShouGong = 2;
+    fuShouInCenter = true;
+  }
   const zhiFuPalace = palaces.find((p) => p.god === '值符');
-  const zhiFu = zhiFuPalace?.star?.split('/')[0];
-  const fuShouGong = palaces.find((p) => p.gong !== 5 && p.diPanGan.includes(ctx.fuShou))?.gong;
+  // 值符落宫的星可能是「天芮/天禽」并写：符首在中宫时值符为天禽，否则为该宫首星
+  const zhiFu = fuShouInCenter ? '天禽' : zhiFuPalace?.star?.split('/')[0];
   const zhiShi = fuShouGong ? GATE_ORIGINAL[fuShouGong] : undefined;
   const zhiShiGong = zhiShi ? palaces.find((p) => p.gate === zhiShi)?.gong : undefined;
 

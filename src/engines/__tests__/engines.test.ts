@@ -103,6 +103,28 @@ describe('飞盘鸣法', () => {
   });
 });
 
+describe('taobi 与 3meta 拆补对照扫描（值使推导回归，含符首落中五的寄宫边界）', () => {
+  it('冬至后连续多日多时辰局数/值使一致、值符星有交集', () => {
+    const taobi = getQimenEngine('taobi');
+    const sanmeta = getQimenEngine('sanmeta');
+    for (let d = 0; d < 6; d++) {
+      for (const h of [1, 9, 13, 21]) {
+        const date = new Date(2024, 11, 22 + d, h, 30);
+        const tag = `2024-12-${22 + d} ${h}:30`;
+        const a = taobi.compute({ date, method: '拆补' });
+        const b = sanmeta.compute({ date, method: '拆补' });
+        expect(`${a.meta.dun}${a.meta.ju}`, tag).toBe(`${b.meta.dun}${b.meta.ju}`);
+        expect(a.meta.zhiShi, tag).toBe(b.meta.zhiShi);
+        expect(a.meta.zhiShi, tag).toBeTruthy();
+        // 值符星允许 天禽/天芮 并写差异，按星字交集判定
+        const setA = new Set((a.meta.zhiFu ?? '').replace(/[天/]/g, '').split(''));
+        const setB = new Set((b.meta.zhiFu ?? '').replace(/[天/]/g, '').split(''));
+        expect([...setA].some((c) => setB.has(c)), `${tag} 值符 ${a.meta.zhiFu} vs ${b.meta.zhiFu}`).toBe(true);
+      }
+    }
+  });
+});
+
 describe('注册表', () => {
   it('注册了 6 个引擎，默认引擎为 3meta', () => {
     expect(listQimenEngines()).toHaveLength(6);

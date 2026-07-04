@@ -1,6 +1,10 @@
 import { useState } from 'react';
-import { Copy, Check, ExternalLink } from 'lucide-react';
+import { Copy, Check } from 'lucide-react';
 import type { QimenEngine, UnifiedQimenChart } from '@/engines/types';
+import type { SolarTimeResult } from '@/utils/true-solar-time';
+import { formatOffset } from '@/utils/true-solar-time';
+import { chartToJson, chartToMarkdown } from '@/utils/export';
+import { copyText } from '@/utils/clipboard';
 import { ganColor } from '@/utils/wuxing';
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -21,29 +25,45 @@ function GanZhi({ gz }: { gz: string }) {
   );
 }
 
-export function MetaPanel({ chart, engine }: { chart: UnifiedQimenChart; engine: QimenEngine }) {
-  const [copied, setCopied] = useState(false);
+interface Props {
+  chart: UnifiedQimenChart;
+  engine: QimenEngine;
+  solar: SolarTimeResult;
+}
+
+function CopyBtn({ kind, copied, title, onCopy }: { kind: 'md' | 'json'; copied: boolean; title: string; onCopy(kind: 'md' | 'json'): void }) {
+  return (
+    <button
+      onClick={() => onCopy(kind)}
+      className="flex items-center gap-1 rounded px-2 py-0.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+      title={title}
+    >
+      {copied ? <Check size={12} /> : <Copy size={12} />}
+      {copied ? '已复制' : kind.toUpperCase()}
+    </button>
+  );
+}
+
+export function MetaPanel({ chart, engine, solar }: Props) {
+  const [copied, setCopied] = useState<'md' | 'json' | null>(null);
   const m = chart.meta;
 
-  const copyJson = async () => {
-    const exportable = { ...chart, raw: undefined };
-    await navigator.clipboard.writeText(JSON.stringify(exportable, null, 2));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+  const copy = async (kind: 'md' | 'json') => {
+    const text = kind === 'md' ? chartToMarkdown(chart, engine, solar) : chartToJson(chart, engine, solar);
+    if (await copyText(text)) {
+      setCopied(kind);
+      setTimeout(() => setCopied(null), 1500);
+    }
   };
 
   return (
     <div className="rounded-lg border border-border bg-card p-3 space-y-1">
       <div className="flex items-center justify-between pb-1">
         <h2 className="text-sm font-semibold text-[var(--color-gold-light)]">盘面信息</h2>
-        <button
-          onClick={copyJson}
-          className="flex items-center gap-1 rounded px-2 py-0.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-          title="复制统一盘面 JSON（可直接投喂 AI 解读）"
-        >
-          {copied ? <Check size={12} /> : <Copy size={12} />}
-          {copied ? '已复制' : 'JSON'}
-        </button>
+        <div className="flex gap-1">
+          <CopyBtn kind="md" copied={copied === 'md'} onCopy={copy} title="复制 Markdown（紧凑，省 token，适合投喂 AI）" />
+          <CopyBtn kind="json" copied={copied === 'json'} onCopy={copy} title="复制 JSON（完整结构，含格局断语与地理上下文）" />
+        </div>
       </div>
 
       <Row label="四柱">
@@ -68,25 +88,17 @@ export function MetaPanel({ chart, engine }: { chart: UnifiedQimenChart; engine:
       <Row label="空亡 / 马星">
         {(m.kongWang?.join('') || '—') + ' / ' + (m.maXing || '—')}
       </Row>
+      {solar.applied && (
+        <Row label="真太阳时">
+          <span className="text-xs">
+            {solar.place} · 修正 {formatOffset(solar.offsetMinutes ?? 0)}
+            <em className="ml-1 not-italic text-muted-foreground">（经度 {formatOffset(solar.longitudeCorrectionMinutes ?? 0)}，均时差 {formatOffset(solar.eotMinutes ?? 0)}）</em>
+          </span>
+        </Row>
+      )}
       <Row label="时间">
         <span className="text-xs text-muted-foreground">{m.solarText}{m.lunarText ? ` · ${m.lunarText}` : ''}</span>
       </Row>
-
-      <div className="pt-2 text-[11px] leading-5 text-muted-foreground">
-        <div className="flex items-center gap-1 flex-wrap">
-          <span className="rounded bg-secondary px-1.5">{engine.pkg}</span>
-          <span className="rounded bg-secondary px-1.5">{engine.license}</span>
-          <a
-            href={engine.homepage}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-0.5 text-[var(--color-gold)]/80 hover:text-[var(--color-gold-light)]"
-          >
-            仓库 <ExternalLink size={10} />
-          </a>
-        </div>
-        <p className="mt-1">{engine.notes}</p>
-      </div>
     </div>
   );
 }

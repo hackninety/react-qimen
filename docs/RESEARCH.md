@@ -73,5 +73,5 @@ hhszzzz/taibu（299★）license NOASSERTION；Brhiza/mingyu（176★）无 lice
 2. **年/月/日家盘**：bigfish `nianJia/yueJia/riJiaGenerate`、jelly `method: '日家'|'月家'|'年家'` 接入
 3. **阴盘奇门 overlay 插件**：以转盘引擎统一模型为底，叠加移星换斗/时空转换层
 4. **山向奇门**：接入 @yhjs/dunjia
-5. **真太阳时校正**：按经度修正起局时间（react-liuren 已有 `true-solar-time` 工具可移植）
-6. **AI 解读**：统一模型 JSON 已可一键复制投喂 LLM
+5. ~~真太阳时校正~~ ✅ 已完成：省市区经度库 + 时区自动 + 手动经度，经度修正 + 均时差
+6. ~~AI 解读导出~~ ✅ 已完成：MD（紧凑省 token）/ JSON（完整）双格式，附地理与口径上下文

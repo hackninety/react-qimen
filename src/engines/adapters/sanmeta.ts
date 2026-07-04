@@ -54,14 +54,16 @@ function compute({ date }: ComputeInput): UnifiedQimenChart {
       if (p.voidness?.hasVoidness) marks.push('空亡');
       if (p.isPostHorse) marks.push('马星');
       if (p.liuYiJiXing?.hasJiXing) marks.push('击刑');
-      const gp = p.gatePressure as unknown;
-      if (gp && gp !== '无' && gp !== '门制') marks.push('门迫');
+      // GatePressure: '迫'(门克宫，凶) | '制'(宫克门) | '和' | '义' | '无'
+      const gp = p.gatePressure;
+      if (gp === '迫') marks.push('门迫');
       if ((p.tombInfo?.heavenlyStemInTomb?.length ?? 0) > 0 || (p.tombInfo?.earthlyStemInTomb?.length ?? 0) > 0)
         marks.push('入墓');
 
       const extras: Record<string, string> = {};
       if (p.status?.star && p.status.star !== '无') extras['星'] = p.status.star;
       if (p.status?.gate && p.status.gate !== '无') extras['门'] = p.status.gate;
+      if (gp && gp !== '无' && gp !== '迫') extras['门宫'] = `门${gp}`;
 
       return {
         gong: p.position as GongIndex,

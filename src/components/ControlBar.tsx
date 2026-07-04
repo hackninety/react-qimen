@@ -71,22 +71,23 @@ export function ControlBar(p: Props) {
         </select>
       </label>
 
-      {/* 定局法 */}
-      <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        定局
-        <select
-          value={p.method}
-          onChange={(e) => p.onMethodChange(e.target.value as JuMethod)}
-          className={selectCls}
-          disabled={p.engine.methods.length === 1}
-        >
-          {p.engine.methods.map((m) => (
-            <option key={m} value={m}>
-              {m}法
-            </option>
-          ))}
-        </select>
-      </label>
+      {/* 定局法（仅支持多种定局法的引擎显示） */}
+      {p.engine.methods.length > 1 && (
+        <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          定局
+          <select
+            value={p.method}
+            onChange={(e) => p.onMethodChange(e.target.value as JuMethod)}
+            className={selectCls}
+          >
+            {p.engine.methods.map((m) => (
+              <option key={m} value={m}>
+                {m}法
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
     </div>
   );
 }
