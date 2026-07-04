@@ -109,3 +109,19 @@ body {
   font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif;
   min-height: 100vh;
 }
+
+/* 玻璃卡片 */
+.glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.light .glass-card {
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* 汉字衬线（盘面要素用楷/宋体系更有卦味） */
+.font-serif {
+  font-family: 'Noto Serif SC', 'Songti SC', SimSun, Georgia, serif;
+}

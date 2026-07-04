@@ -33,13 +33,10 @@ function PatternItem({ p }: { p: PatternHit }) {
 export function PatternsPanel({ patterns }: { patterns: PatternHit[] }) {
   if (!patterns.length) return null;
   return (
-    <div className="rounded-lg border border-border bg-card p-3">
-      <h2 className="pb-2 text-sm font-semibold text-[var(--color-gold-light)]">格局（{patterns.length}）</h2>
-      <ul className="space-y-1 max-h-80 overflow-y-auto pr-1">
-        {patterns.map((p, i) => (
-          <PatternItem key={`${p.name}-${p.gong}-${i}`} p={p} />
-        ))}
-      </ul>
-    </div>
+    <ul className="grid gap-1 md:grid-cols-2 max-h-96 overflow-y-auto pr-1">
+      {patterns.map((p, i) => (
+        <PatternItem key={`${p.name}-${p.gong}-${i}`} p={p} />
+      ))}
+    </ul>
   );
 }
