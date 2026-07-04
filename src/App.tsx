@@ -179,7 +179,7 @@ export default function App() {
       {/* 底部：当前引擎信息 */}
       <footer className="border-t border-border/30 py-4">
         <div className="max-w-5xl mx-auto px-4 text-[11px] leading-5 text-muted-foreground">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
             <span className="font-semibold text-foreground/80">{engine.name}</span>
             <span className="rounded bg-secondary px-1.5">{engine.pkg}</span>
             <span className="rounded bg-secondary px-1.5">{engine.license}</span>
