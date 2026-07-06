@@ -1,6 +1,7 @@
 import type { QimenEngine, UnifiedQimenChart } from '@/engines/types';
 import type { SolarTimeResult } from '@/utils/true-solar-time';
 import { formatOffset } from '@/utils/true-solar-time';
+import { jieQiLabel, juBasisText } from '@/utils/chart-basis';
 import { wuxingColor } from '@/utils/wuxing';
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -56,7 +57,7 @@ export function BasicInfoPanel({ chart, engine, solar }: Props) {
             <span className="text-xs text-muted-foreground">钟表时间（未启用真太阳时）</span>
           </Row>
         )}
-        <Row label="节气">{m.jieQi}</Row>
+        <Row label={jieQiLabel(chart)}>{m.jieQi}</Row>
       </div>
 
       {/* 四柱卡片 */}
@@ -81,6 +82,9 @@ export function BasicInfoPanel({ chart, engine, solar }: Props) {
           <span className="text-[var(--color-gold)] font-semibold">
             {m.dun}{m.ju}局{m.yuan ? ` · ${m.yuan}` : ''}
           </span>
+        </Row>
+        <Row label="定局">
+          <span className="text-xs">{juBasisText(chart)}</span>
         </Row>
         <Row label="旬首">
           <span className="font-serif">{m.xunShou ?? '—'}{m.fuShou ? `（遁${m.fuShou}）` : ''}</span>

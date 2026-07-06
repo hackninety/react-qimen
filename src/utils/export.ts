@@ -7,6 +7,7 @@
 import type { QimenEngine, UnifiedQimenChart } from '@/engines/types';
 import { GONG_TRIGRAMS, GONG_DIRECTIONS } from '@/engines/types';
 import type { CanonRef } from '@/hooks/useCanonRefs';
+import { juBasisDetail, juBasisText } from './chart-basis';
 import type { SolarTimeResult } from './true-solar-time';
 import { formatOffset } from './true-solar-time';
 
@@ -50,10 +51,11 @@ export function chartToJson(chart: UnifiedQimenChart, engine: QimenEngine, solar
       排盘时间: fmt(solar.date),
       农历: m.lunarText,
       四柱: m.siZhu,
-      节气: m.jieQi,
+      当日节气: m.jieQi,
     },
     真太阳时: solarContext(solar),
     局: {
+      定局依据: juBasisDetail(chart),
       阴阳遁: m.dun,
       局数: m.ju,
       三元: m.yuan,
@@ -116,10 +118,14 @@ export function chartToMarkdown(chart: UnifiedQimenChart, engine: QimenEngine, s
     lines.push(`- 排盘时间：${fmt(solar.date)}（钟表时间，未启用真太阳时）`);
   }
   if (m.lunarText) lines.push(`- 农历：${m.lunarText}`);
-  lines.push(`- 四柱：${m.siZhu.year} ${m.siZhu.month} ${m.siZhu.day} ${m.siZhu.hour}`);
+  lines.push(`- 四柱：${[m.siZhu.year, m.siZhu.month, m.siZhu.day, m.siZhu.hour].filter(Boolean).join(' ')}`);
+  lines.push(`- 定局依据：${juBasisDetail(chart)}`);
   lines.push(
-    `- 局：${m.jieQi} ${m.dun}${m.ju}局${m.yuan ? ` ${m.yuan}` : ''}｜旬首 ${m.xunShou ?? '—'}${m.fuShou ? `（遁${m.fuShou}）` : ''}｜值符 ${m.zhiFu ?? '—'}${m.zhiFuGong ? `落${m.zhiFuGong}宫` : ''}｜值使 ${m.zhiShi ?? '—'}${m.zhiShiGong ? `落${m.zhiShiGong}宫` : ''}｜空亡 ${m.kongWang?.join('') || '—'}｜马星 ${m.maXing || '—'}`,
+    `- 局：${juBasisText(chart)} ${m.dun}${m.ju}局${m.yuan ? ` ${m.yuan}` : ''}｜旬首 ${m.xunShou ?? '—'}${m.fuShou ? `（遁${m.fuShou}）` : ''}｜值符 ${m.zhiFu ?? '—'}${m.zhiFuGong ? `落${m.zhiFuGong}宫` : ''}｜值使 ${m.zhiShi ?? '—'}${m.zhiShiGong ? `落${m.zhiShiGong}宫` : ''}｜空亡 ${m.kongWang?.join('') || '—'}｜马星 ${m.maXing || '—'}`,
   );
+  if (chart.layer !== '时家') {
+    lines.push(`- 节气背景：${m.jieQi}（历法参考，本盘定局依据见上，非据此节气）`);
+  }
   lines.push('');
 
   lines.push('| 宫位 | 八神 | 九星 | 八门 | 天盘 | 地盘 | 暗干 | 标记/备注 |');

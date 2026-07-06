@@ -66,6 +66,33 @@ describe('典籍参考随导出输出', () => {
   });
 });
 
+describe('年家定局依据（修正：不再误显当日节气）', () => {
+  const bigfish = getQimenEngine('bigfish');
+  const yearChart = bigfish.compute({ date, method: '拆补', layer: '年家' });
+  const solar = resolveSolarTime(date, defaultSolarTimeSetting());
+
+  it('MD 局行以太岁年为定局依据，不以当日节气打头', () => {
+    const md = chartToMarkdown(yearChart, bigfish, solar);
+    expect(md).toMatch(/定局依据：太岁 甲辰 年/);
+    expect(md).toMatch(/- 局：太岁甲辰年 /);
+    expect(md).not.toMatch(/- 局：小暑/); // 排盘当天节气不再冒充定局依据
+    expect(md).toMatch(/节气背景：/); // 当日节气降级为背景
+  });
+
+  it('JSON 局块含定局依据，节气归入「当日节气」不再叫「节气」', () => {
+    const parsed = JSON.parse(chartToJson(yearChart, bigfish, solar));
+    expect(parsed['局']['定局依据']).toContain('太岁 甲辰 年');
+    expect(parsed['时间']['当日节气']).toBeDefined();
+    expect(parsed['时间']['节气']).toBeUndefined();
+  });
+
+  it('时家不受影响：局行仍按节气', () => {
+    const md = chartToMarkdown(chart, engine, solar);
+    expect(md).toMatch(/- 局：芒种 阳遁6局/);
+    expect(md).not.toMatch(/节气背景：/);
+  });
+});
+
 describe('JSON 导出', () => {
   it('结构完整且可解析，含排盘口径与九宫', () => {
     const solar = resolveSolarTime(date, defaultSolarTimeSetting());
