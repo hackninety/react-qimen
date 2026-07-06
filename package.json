@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "sync:corpus": "node scripts/sync-corpus.mjs"
   },
   "dependencies": {
     "3meta": "^2.6.0",
@@ -22,7 +23,7 @@
     "lunar-typescript": "^1.8.6",
     "qimen-mingfa": "^1.0.28",
     "qimendunjia-standalone": "^0.1.0",
-    "qmdj-ts-lib": "git+https://github.com/hackninety/qmdj-ts-lib.git#v0.1.1",
+    "qmdj-ts-lib": "git+https://github.com/hackninety/qmdj-ts-lib.git#main",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
