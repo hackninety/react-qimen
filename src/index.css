@@ -125,3 +125,34 @@ body {
 .font-serif {
   font-family: 'Noto Serif SC', 'Songti SC', SimSun, Georgia, serif;
 }
+
+/* 典籍抽屉正文排版 */
+.canon-prose {
+  font-family: 'Noto Serif SC', 'Songti SC', SimSun, Georgia, serif;
+  line-height: 1.9;
+  font-size: 0.9rem;
+}
+.canon-prose h1 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-gold-light);
+  margin-bottom: 0.75rem;
+}
+.canon-prose h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-gold);
+  margin: 1.25rem 0 0.5rem;
+  padding-left: 0.5rem;
+  border-left: 3px solid var(--color-gold);
+}
+.canon-prose p {
+  margin: 0.6rem 0;
+}
+.canon-prose blockquote {
+  margin: 0.5rem 0;
+  padding: 0.4rem 0.75rem;
+  border-left: 3px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+}

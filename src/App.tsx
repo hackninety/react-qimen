@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ExternalLink, Moon, Sun } from 'lucide-react';
+import { BookOpen, ExternalLink, Moon, Sun } from 'lucide-react';
 import type { JuMethod, QimenEngineId, School, UnifiedQimenChart } from './engines/types';
 import { DEFAULT_ENGINE_ID, getQimenEngine, listEnginesBySchool, resolveMethod } from './engines/registry';
 import { ControlBar } from './components/ControlBar';
@@ -13,6 +13,9 @@ import { PatternsPanel } from './components/PatternsPanel';
 import { ExportPanel } from './components/ExportPanel';
 import { fromInputValue, toInputValue } from './utils/datetime';
 import { defaultSolarTimeSetting, resolveSolarTime, type SolarTimeSetting } from './utils/true-solar-time';
+
+// 典籍抽屉懒加载：react-markdown 与书卷载荷不进首屏包
+const CanonDrawer = lazy(() => import('./components/CanonDrawer'));
 
 type ComputeResult = { ok: true; chart: UnifiedQimenChart } | { ok: false; error: string };
 
@@ -40,6 +43,7 @@ export default function App() {
   const [engineId, setEngineId] = useState<QimenEngineId>(DEFAULT_ENGINE_ID);
   const [method, setMethod] = useState<JuMethod>('拆补');
   const [solarSetting, setSolarSetting] = useState<SolarTimeSetting>(defaultSolarTimeSetting);
+  const [canonOpen, setCanonOpen] = useState(false);
   // 18:00~06:00 默认暗色
   const [isDark, setIsDark] = useState(() => {
     const h = new Date().getHours();
@@ -97,13 +101,23 @@ export default function App() {
               <p className="text-[10px] text-muted-foreground leading-tight">多引擎插件式 · 时家转盘 / 飞盘鸣法</p>
             </div>
           </div>
-          <button
-            onClick={() => setIsDark((v) => !v)}
-            className="p-2 rounded-lg hover:bg-secondary transition-colors"
-            title="切换主题"
-          >
-            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setCanonOpen(true)}
+              className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm hover:bg-secondary transition-colors"
+              title="《奇門遁甲秘笈大全》典籍库（33 篇 · 796 节 · 全文检索）"
+            >
+              <BookOpen className="w-4 h-4 text-[var(--color-gold)]" />
+              <span className="hidden sm:inline">典籍</span>
+            </button>
+            <button
+              onClick={() => setIsDark((v) => !v)}
+              className="p-2 rounded-lg hover:bg-secondary transition-colors"
+              title="切换主题"
+            >
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+          </div>
         </div>
         <div className="h-px bg-gradient-to-r from-transparent via-[var(--color-gold)]/30 to-transparent" />
       </header>
@@ -193,9 +207,15 @@ export default function App() {
             </a>
             <span>{engine.notes}</span>
           </div>
-          <p className="mt-1 text-center text-muted-foreground/50">算法均来自开源上游库（npm 直接依赖，非 fork）· 仅供学习研究</p>
+          <p className="mt-1 text-center text-muted-foreground/50">算法均来自开源上游库（npm 直接依赖，非 fork）· 典籍语料 qmdj-ts-lib（ctext 转录）· 仅供学习研究</p>
         </div>
       </footer>
+
+      {canonOpen && (
+        <Suspense fallback={null}>
+          <CanonDrawer onClose={() => setCanonOpen(false)} />
+        </Suspense>
+      )}
     </div>
   );
 }

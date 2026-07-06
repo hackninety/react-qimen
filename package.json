@@ -22,8 +22,11 @@
     "lunar-typescript": "^1.8.6",
     "qimen-mingfa": "^1.0.28",
     "qimendunjia-standalone": "^0.1.0",
+    "qmdj-ts-lib": "file:../qmdj-ts-lib",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.5.0",
     "taobi": "^0.4.5"
   },
