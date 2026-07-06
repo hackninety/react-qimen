@@ -25,12 +25,13 @@ interface Props {
 
 export function BasicInfoPanel({ chart, engine, solar }: Props) {
   const m = chart.meta;
+  // 年月日家仅相关柱有值，空柱不展示
   const pillars = [
     { label: '年柱', value: m.siZhu.year },
     { label: '月柱', value: m.siZhu.month },
     { label: '日柱', value: m.siZhu.day },
     { label: '时柱', value: m.siZhu.hour },
-  ];
+  ].filter((p) => p.value);
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
@@ -59,12 +60,12 @@ export function BasicInfoPanel({ chart, engine, solar }: Props) {
       </div>
 
       {/* 四柱卡片 */}
-      <div className="grid grid-cols-4 gap-1.5 content-center">
+      <div className="flex flex-wrap gap-1.5 content-center">
         {pillars.map((p) => {
           const gan = p.value?.charAt(0) || '';
           const zhi = p.value?.charAt(1) || '';
           return (
-            <div key={p.label} className="flex flex-col items-center rounded-lg bg-secondary/50 border border-border/30 py-2 px-1">
+            <div key={p.label} className="flex flex-col items-center rounded-lg bg-secondary/50 border border-border/30 py-2 w-14">
               <span className="text-[10px] text-muted-foreground mb-1">{p.label}</span>
               <span className="text-lg font-bold font-serif leading-none" style={{ color: wuxingColor(gan) }}>{gan}</span>
               <div className="w-3 h-px bg-border/50 my-1" />
@@ -98,8 +99,13 @@ export function BasicInfoPanel({ chart, engine, solar }: Props) {
         <div className="flex justify-between items-center pt-1">
           <span className="text-muted-foreground text-xs">口径</span>
           <span className="flex gap-1 text-[10px]">
-            <span className="rounded bg-secondary px-1.5 py-0.5">{chart.school}</span>
-            <span className="rounded bg-secondary px-1.5 py-0.5">{chart.method}法</span>
+            <span className="rounded bg-[var(--color-gold)]/20 text-[var(--color-gold-light)] px-1.5 py-0.5">{chart.layer}</span>
+            {chart.layer === '时家' && (
+              <>
+                <span className="rounded bg-secondary px-1.5 py-0.5">{chart.school}</span>
+                <span className="rounded bg-secondary px-1.5 py-0.5">{chart.method}法</span>
+              </>
+            )}
             <span className="rounded bg-[var(--color-gold)]/15 text-[var(--color-gold)] px-1.5 py-0.5">{engine.name}</span>
           </span>
         </div>

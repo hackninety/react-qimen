@@ -39,8 +39,9 @@ export function chartToJson(chart: UnifiedQimenChart, engine: QimenEngine, solar
   const payload = {
     应用: 'react-qimen 奇门遁甲排盘',
     排盘口径: {
-      流派: chart.school,
-      定局法: `${chart.method}法`,
+      盘类: chart.layer,
+      流派: chart.layer === '时家' ? chart.school : undefined,
+      定局法: chart.layer === '时家' ? `${chart.method}法` : undefined,
       引擎: { 名称: engine.name, npm包: engine.pkg, 许可证: engine.license, 仓库: engine.homepage },
       能力: engine.capabilities,
       提示: '不同流派/定局法结果不可直接混用比对；本盘所有字段均按上述口径产生',
@@ -105,7 +106,8 @@ export function chartToMarkdown(chart: UnifiedQimenChart, engine: QimenEngine, s
   const m = chart.meta;
   const lines: string[] = [];
 
-  lines.push(`# 奇门遁甲排盘（${chart.school} · ${chart.method}法）`);
+  const caliber = chart.layer === '时家' ? `${chart.school} · ${chart.method}法` : `${chart.layer}奇门`;
+  lines.push(`# 奇门遁甲排盘（${caliber}）`);
   lines.push('');
   if (solar.applied) {
     lines.push(`- 排盘时间：真太阳时 ${fmt(solar.date)}（输入 ${fmt(solar.standardDate)}，总修正 ${formatOffset(solar.offsetMinutes ?? 0)} = 经度 ${formatOffset(solar.longitudeCorrectionMinutes ?? 0)} + 均时差 ${formatOffset(solar.eotMinutes ?? 0)}）`);

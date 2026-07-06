@@ -6,7 +6,7 @@
  * 2. 在 engines/adapters/ 下实现适配器，输出统一模型 UnifiedQimenChart
  * 3. 在本文件 import 并加入 engines 数组
  */
-import type { JuMethod, QimenEngine, QimenEngineId, School } from './types';
+import type { ChartLayer, JuMethod, QimenEngine, QimenEngineId, School } from './types';
 import { sanmetaEngine } from './adapters/sanmeta';
 import { bigfishEngine } from './adapters/bigfish';
 import { jellyEngine } from './adapters/jelly';
@@ -33,6 +33,11 @@ export function listEnginesBySchool(school: School): QimenEngine[] {
   return engines.filter((e) => e.school === school);
 }
 
+/** 支持指定盘类的引擎（年/月/日家用；时家另按流派过滤） */
+export function listEnginesByLayer(layer: ChartLayer): QimenEngine[] {
+  return engines.filter((e) => e.layers.includes(layer));
+}
+
 export function getQimenEngine(id: QimenEngineId): QimenEngine {
   return engines.find((e) => e.id === id) ?? engines[0];
 }
@@ -46,4 +51,9 @@ export function registerQimenEngine(engine: QimenEngine): void {
 /** 引擎支持某定局法则返回该法，否则回退到引擎默认（methods[0]） */
 export function resolveMethod(engine: QimenEngine, method: JuMethod): JuMethod {
   return engine.methods.includes(method) ? method : engine.methods[0];
+}
+
+/** 引擎支持某盘类则返回该类，否则回退到引擎默认（layers[0]） */
+export function resolveLayer(engine: QimenEngine, layer: ChartLayer): ChartLayer {
+  return engine.layers.includes(layer) ? layer : engine.layers[0];
 }

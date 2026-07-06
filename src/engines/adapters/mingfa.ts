@@ -108,6 +108,7 @@ function compute({ date }: ComputeInput): UnifiedQimenChart {
     engineId: 'mingfa',
     school: '飞盘鸣法',
     method: '鸣法',
+    layer: '时家',
     meta: {
       siZhu: { year: info.nianzhu, month: info.yuezhu, day: info.rizhu, hour: info.shizhu },
       jieQi: info.jieqi,
@@ -135,6 +136,7 @@ export const mingfaEngine: QimenEngine = {
   name: '鸣法 Mingfa',
   school: '飞盘鸣法',
   methods: ['鸣法'],
+  layers: ['时家'],
   pkg: 'qimen-mingfa',
   license: 'MIT',
   homepage: 'https://github.com/Richardge885/qimen-refactor',

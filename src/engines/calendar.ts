@@ -29,13 +29,18 @@ export const GATE_ORIGINAL: Partial<Record<GongIndex, string>> = {
   1: '休门', 8: '生门', 3: '伤门', 4: '杜门', 9: '景门', 2: '死门', 7: '惊门', 6: '开门',
 };
 
-/** 三合驿马：时支 → 马星地支 */
+/** 三合驿马：本支（时/日/月/年支）→ 马星地支 */
 const YI_MA: Record<string, string> = {
   申: '寅', 子: '寅', 辰: '寅',
   寅: '申', 午: '申', 戌: '申',
   巳: '亥', 酉: '亥', 丑: '亥',
   亥: '巳', 卯: '巳', 未: '巳',
 };
+
+/** 按地支取三合驿马（年/月/日家按对应柱支取马） */
+export function yiMaOf(zhi: string): string {
+  return YI_MA[zhi] ?? '';
+}
 
 /** 干支 → 六十甲子序号（0-59） */
 export function jiaZiIndex(ganZhi: string): number {
@@ -70,6 +75,8 @@ export interface CalendarContext {
   dayGzIndex: number;
   hourGan: string;
   hourZhi: string;
+  /** 节气月序（寅=1 … 丑=12），月家定局用 */
+  solarMonthOrdinal: number;
   /** 时旬首 */
   xunShou: string;
   /** 符首 */
@@ -98,6 +105,9 @@ export function getCalendarContext(date: Date): CalendarContext {
 
   const xunShou = xunShouOf(hour);
   const hourZhi = hour[1];
+  // 节气月序：寅=正月(1) … 丑=十二月(12)，月家定局用
+  const monthBranchIdx = DI_ZHI.indexOf(month[1] as (typeof DI_ZHI)[number]);
+  const solarMonthOrdinal = monthBranchIdx < 0 ? 1 : ((monthBranchIdx - 2 + 12) % 12) + 1;
 
   const pad = (n: number) => String(n).padStart(2, '0');
   return {
@@ -109,6 +119,7 @@ export function getCalendarContext(date: Date): CalendarContext {
     dayGzIndex: jiaZiIndex(day),
     hourGan: hour[0],
     hourZhi,
+    solarMonthOrdinal,
     xunShou,
     fuShou: XUN_TO_FUSHOU[xunShou] ?? '',
     hourKong: XUN_TO_KONG[xunShou] ?? ['', ''],

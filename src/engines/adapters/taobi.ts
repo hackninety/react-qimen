@@ -68,6 +68,7 @@ function compute({ date, method }: ComputeInput): UnifiedQimenChart {
     engineId: 'taobi',
     school: '时家转盘',
     method,
+    layer: '时家',
     meta: {
       siZhu: ctx.siZhu,
       jieQi: ctx.jieQi,
@@ -94,6 +95,7 @@ export const taobiEngine: QimenEngine = {
   name: '道盘 Taobi',
   school: '时家转盘',
   methods: ['拆补', '茅山', '均分'],
+  layers: ['时家'],
   pkg: 'taobi',
   license: 'MPL-2.0',
   homepage: 'https://github.com/Taogram/taobi',

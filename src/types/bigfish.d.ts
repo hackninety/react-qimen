@@ -50,6 +50,13 @@ declare module 'bigfishmarquis-qimen' {
     juNumber: number;
     yuan: '上' | '中' | '下';
   }
+
+  /** 年家排盘（按太岁年定局） */
+  export function nianJiaGenerate(year: number): QimenChart;
+  /** 月家排盘（month 为节气月序：寅=1 … 丑=12） */
+  export function yueJiaGenerate(year: number, month: number): QimenChart;
+  /** 日家排盘（公历年月日） */
+  export function riJiaGenerate(year: number, month: number, day: number): QimenChart;
 }
 
 declare module 'bigfishmarquis-qimen/src/engines/shijia' {

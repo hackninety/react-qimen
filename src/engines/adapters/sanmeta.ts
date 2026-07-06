@@ -90,6 +90,7 @@ function compute({ date }: ComputeInput): UnifiedQimenChart {
     engineId: 'sanmeta',
     school: '时家转盘',
     method: '拆补',
+    layer: '时家',
     meta: {
       siZhu: {
         year: fp.year.stem + fp.year.branch,
@@ -122,6 +123,7 @@ export const sanmetaEngine: QimenEngine = {
   name: '三元 3meta',
   school: '时家转盘',
   methods: ['拆补'],
+  layers: ['时家'],
   pkg: '3meta',
   license: 'MIT',
   homepage: 'https://github.com/3metaJun/3meta',

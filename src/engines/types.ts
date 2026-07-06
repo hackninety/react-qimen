@@ -55,6 +55,11 @@ export type School = '时家转盘' | '飞盘鸣法';
 
 export const SCHOOLS: School[] = ['时家转盘', '飞盘鸣法'];
 
+/** 盘类（时间层级）：时家最常用；年/月/日家用于观一年/一月/一日之运 */
+export type ChartLayer = '时家' | '日家' | '月家' | '年家';
+
+export const CHART_LAYERS: ChartLayer[] = ['时家', '日家', '月家', '年家'];
+
 /** 定局法 */
 export type JuMethod = '拆补' | '茅山' | '置闰' | '均分' | '鸣法';
 
@@ -131,6 +136,8 @@ export interface UnifiedQimenChart {
   engineId: QimenEngineId;
   school: School;
   method: JuMethod;
+  /** 盘类（时/日/月/年家） */
+  layer: ChartLayer;
   meta: ChartMeta;
   /** 九宫信息，index = 宫号 - 1（中五宫依流派可能为空/寄宫） */
   palaces: PalaceInfo[];
@@ -166,6 +173,8 @@ export interface ComputeInput {
   date: Date;
   /** 定局法，必须是引擎 methods 中的一项 */
   method: JuMethod;
+  /** 盘类，必须是引擎 layers 中的一项；缺省为「时家」（向后兼容） */
+  layer?: ChartLayer;
 }
 
 export interface QimenEngine {
@@ -175,6 +184,8 @@ export interface QimenEngine {
   school: School;
   /** 支持的定局法（第一项为默认） */
   methods: JuMethod[];
+  /** 支持的盘类（第一项为默认；缺省视为仅「时家」） */
+  layers: ChartLayer[];
   /** npm 包名 */
   pkg: string;
   license: string;

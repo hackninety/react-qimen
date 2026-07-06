@@ -27,7 +27,7 @@ export function NinePalaceGrid({ chart }: { chart: UnifiedQimenChart }) {
       </div>
       <div className="mt-1.5 flex justify-between text-[10px] text-muted-foreground/60 px-1">
         <span>上南下北 · 左东右西</span>
-        <span>{chart.school} · {chart.method}法</span>
+        <span>{chart.layer === '时家' ? `${chart.school} · ${chart.method}法` : `${chart.layer}奇门`}</span>
       </div>
     </div>
   );

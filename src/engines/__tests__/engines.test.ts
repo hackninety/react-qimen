@@ -5,7 +5,7 @@
  * （已由 3meta / qimendunjia-standalone / kinqimen / qimen-mingfa 四家独立算法互相印证）
  */
 import { describe, expect, it } from 'vitest';
-import { listQimenEngines, getQimenEngine, listEnginesBySchool } from '../registry';
+import { listQimenEngines, getQimenEngine, listEnginesBySchool, resolveLayer } from '../registry';
 import type { UnifiedQimenChart } from '../types';
 
 const BASE_DATE = new Date(2024, 5, 15, 14, 30, 0);
@@ -122,6 +122,44 @@ describe('taobi 与 3meta 拆补对照扫描（值使推导回归，含符首落
         expect([...setA].some((c) => setB.has(c)), `${tag} 值符 ${a.meta.zhiFu} vs ${b.meta.zhiFu}`).toBe(true);
       }
     }
+  });
+});
+
+describe('年/月/日家四层盘', () => {
+  const layerEngines = listQimenEngines().filter((e) => e.layers.length > 1);
+
+  it('bigfish 与 jelly 声明支持四层', () => {
+    expect(layerEngines.map((e) => e.id).sort()).toEqual(['bigfish', 'jelly']);
+    for (const e of layerEngines) {
+      expect(e.layers).toEqual(['时家', '日家', '月家', '年家']);
+    }
+  });
+
+  for (const engine of listQimenEngines().filter((e) => e.layers.includes('年家'))) {
+    for (const layer of ['年家', '月家', '日家'] as const) {
+      it(`${engine.name} ${layer}结构完整、局数与值符值使有效`, () => {
+        const chart = engine.compute({ date: BASE_DATE, method: '拆补', layer });
+        checkStructure(chart);
+        expect(chart.layer).toBe(layer);
+        expect(chart.meta.zhiFu, '值符星').toBeTruthy();
+        expect(chart.meta.zhiShi, '值使门').toBeTruthy();
+        expect(chart.meta.zhiFuGong).toBeGreaterThanOrEqual(1);
+        if (layer === '年家') expect(chart.meta.siZhu.year, '年家须有年柱').toBeTruthy();
+      });
+    }
+  }
+
+  it('bigfish 年家：2024 甲辰年 → 阴遁七局下元、四柱仅年柱', () => {
+    const chart = getQimenEngine('bigfish').compute({ date: BASE_DATE, method: '拆补', layer: '年家' });
+    expect(chart.meta.siZhu.year).toBe('甲辰');
+    expect(chart.meta.siZhu.month).toBe('');
+    expect(chart.meta.dun).toBe('阴遁');
+    expect(chart.meta.ju).toBe(7);
+  });
+
+  it('不支持的盘类回退时家（resolveLayer）', () => {
+    expect(resolveLayer(getQimenEngine('sanmeta'), '年家')).toBe('时家');
+    expect(resolveLayer(getQimenEngine('bigfish'), '年家')).toBe('年家');
   });
 });
 

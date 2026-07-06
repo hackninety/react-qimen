@@ -25,6 +25,16 @@
 └──────────────────────────────┴─────────────────┘
 ```
 
+## 盘类维度（年/月/日/时家）
+
+`ChartLayer = '时家' | '日家' | '月家' | '年家'`，正交于流派与定局法：
+
+- 引擎声明 `layers`（支持的盘类，第一项默认）；`ComputeInput.layer` 可选（缺省时家，向后兼容）。
+- **bigfish**（`nianJia/yueJia/riJiaGenerate`）、**jelly**（`calculate(date,{method:'年家'…})`）支持四层；其余引擎仅时家。
+- UI 三级过滤：盘类（时/日/月/年家）→ 时家时再分流派（转盘/飞盘）→ 时家转盘引擎再选定局法；年月日家隐藏流派与定局法，引擎按 `listEnginesByLayer` 过滤。
+- 切盘类时若当前引擎不支持则切到支持它的首个引擎（`resolveLayer` 兜底 compute）。
+- 引擎差异（记录，非 bug）：bigfish 年家四柱裁剪到年柱（月/日/时柱空），jelly 年家保留传入时刻的完整四柱（仅定局用年干支）；月家按节气月序（`calendar.ts` 的 `solarMonthOrdinal`，寅=1…丑=12）。
+
 ## 统一领域模型（`src/engines/types.ts`）
 
 - `UnifiedQimenChart`：`meta`（四柱/节气/三元/阴阳遁/局数/旬首/符首/值符值使及落宫/空亡/马星）

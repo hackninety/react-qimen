@@ -73,6 +73,7 @@ function compute({ date }: ComputeInput): UnifiedQimenChart {
     engineId: 'kinqimen',
     school: '时家转盘',
     method: '拆补',
+    layer: '时家',
     meta: {
       siZhu: {
         year: gz?.[1] ?? '',
@@ -108,6 +109,7 @@ export const kinqimenEngine: QimenEngine = {
   name: '堅奇門 KinQimen',
   school: '时家转盘',
   methods: ['拆补'],
+  layers: ['时家'],
   pkg: 'kinqimen',
   license: 'GPL-3.0',
   homepage: 'https://github.com/kentang2017/kinqimen',

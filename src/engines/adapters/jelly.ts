@@ -6,6 +6,7 @@
 import { calculate } from 'qimendunjia-standalone';
 import { markKongMa } from '../calendar';
 import type {
+  ChartLayer,
   ComputeInput,
   GongIndex,
   PalaceInfo,
@@ -20,8 +21,9 @@ function normalizeStar(v: string): string | undefined {
   return v.split('').map((c) => `天${c}`).join('/');
 }
 
-function compute({ date }: ComputeInput): UnifiedQimenChart {
-  const r = calculate(date);
+function compute({ date, layer }: ComputeInput): UnifiedQimenChart {
+  const L: ChartLayer = layer ?? '时家';
+  const r = calculate(date, { method: L });
   if ('error' in r) throw new Error(`qimendunjia-standalone 排盘失败：${r.message}`);
 
   const raw = r.raw;
@@ -59,6 +61,7 @@ function compute({ date }: ComputeInput): UnifiedQimenChart {
     engineId: 'jelly',
     school: '时家转盘',
     method: '拆补',
+    layer: L,
     meta: {
       siZhu: {
         year: r.info.siZhu.year,
@@ -91,10 +94,11 @@ export const jellyEngine: QimenEngine = {
   name: '鲸落 QMDJ Standalone',
   school: '时家转盘',
   methods: ['拆补'],
+  layers: ['时家', '日家', '月家', '年家'],
   pkg: 'qimendunjia-standalone',
   license: 'MIT',
   homepage: 'https://github.com/MrJelly/QiMenDunJia',
-  notes: '历法适配层架构（寿星天文历），交节边界精度高，支持晚子时模式切换',
+  notes: '历法适配层架构（寿星天文历），交节边界精度高，支持年月日时四层盘与晚子时模式',
   capabilities: ['暗干', '马星', '空亡'],
   compute,
 };

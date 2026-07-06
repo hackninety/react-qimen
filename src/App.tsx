@@ -1,8 +1,9 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { BookOpen, ExternalLink, Moon, Sun } from 'lucide-react';
-import type { JuMethod, QimenEngineId, School, UnifiedQimenChart } from './engines/types';
-import { DEFAULT_ENGINE_ID, getQimenEngine, listEnginesBySchool, listQimenEngines, resolveMethod } from './engines/registry';
+import type { ChartLayer, JuMethod, QimenEngineId, School, UnifiedQimenChart } from './engines/types';
+import { CHART_LAYERS } from './engines/types';
+import { DEFAULT_ENGINE_ID, getQimenEngine, listEnginesByLayer, listEnginesBySchool, listQimenEngines, resolveLayer, resolveMethod } from './engines/registry';
 import { usePersistentState } from './hooks/usePersistentState';
 import { ControlBar } from './components/ControlBar';
 import { SolarTimeControl } from './components/SolarTimeControl';
@@ -43,6 +44,7 @@ function Section({ title, delay, children }: { title: string; delay: number; chi
 export default function App() {
   // 起局参数持久化（localStorage）：刷新后由引擎按同参数重算，不缓存派生盘面
   const [dateStr, setDateStr] = usePersistentState('dateStr', () => toInputValue(new Date()), (v) => typeof v === 'string' && fromInputValue(v) !== null);
+  const [layer, setLayer] = usePersistentState<ChartLayer>('layer', '时家', (v) => CHART_LAYERS.includes(v as ChartLayer));
   // 流派由引擎派生（engine.school），不单独持久化——保证脏数据回退后流派/引擎恒一致
   const [engineId, setEngineId] = usePersistentState<QimenEngineId>('engineId', DEFAULT_ENGINE_ID, (v) => listQimenEngines().some((e) => e.id === v));
   const [method, setMethod] = usePersistentState<JuMethod>('method', '拆补', (v) => typeof v === 'string');
@@ -67,6 +69,7 @@ export default function App() {
   const engine = getQimenEngine(engineId);
   const school: School = engine.school;
   const activeMethod = resolveMethod(engine, method);
+  const activeLayer = resolveLayer(engine, layer);
 
   const solar = useMemo(() => {
     const date = fromInputValue(dateStr);
@@ -76,11 +79,23 @@ export default function App() {
   const result = useMemo<ComputeResult>(() => {
     if (!fromInputValue(dateStr)) return { ok: false, error: '时间格式无效' };
     try {
-      return { ok: true, chart: engine.compute({ date: solar.date, method: activeMethod }) };
+      return { ok: true, chart: engine.compute({ date: solar.date, method: activeMethod, layer: activeLayer }) };
     } catch (e) {
       return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }
-  }, [engine, dateStr, solar, activeMethod]);
+  }, [engine, dateStr, solar, activeMethod, activeLayer]);
+
+  // 切盘类：当前引擎不支持新盘类时，切到支持它的首个引擎
+  const handleLayerChange = (l: ChartLayer) => {
+    setLayer(l);
+    if (!engine.layers.includes(l)) {
+      const first = listEnginesByLayer(l)[0];
+      if (first) {
+        setEngineId(first.id);
+        setMethod(first.methods[0]);
+      }
+    }
+  };
 
   const handleSchoolChange = (s: School) => {
     const first = listEnginesBySchool(s)[0];
@@ -140,10 +155,12 @@ export default function App() {
           <div className="space-y-2.5">
             <ControlBar
               dateStr={dateStr}
+              layer={activeLayer}
               school={school}
               engine={engine}
               method={activeMethod}
               onDateChange={setDateStr}
+              onLayerChange={handleLayerChange}
               onSchoolChange={handleSchoolChange}
               onEngineChange={handleEngineChange}
               onMethodChange={setMethod}
