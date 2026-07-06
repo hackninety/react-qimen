@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Bot, Check, Copy, Download, FileJson, Sparkles } from 'lucide-react';
 import type { QimenEngine, UnifiedQimenChart } from '@/engines/types';
+import type { CanonRef } from '@/hooks/useCanonRefs';
 import type { SolarTimeResult } from '@/utils/true-solar-time';
 import { chartToJson, chartToMarkdown } from '@/utils/export';
 import { generateQimenPrompt } from '@/utils/prompt-template';
@@ -11,17 +12,19 @@ interface Props {
   chart: UnifiedQimenChart;
   engine: QimenEngine;
   solar: SolarTimeResult;
+  /** 盘面典籍参考（随导出一并输出） */
+  refs?: CanonRef[] | null;
 }
 
 type CopyKind = 'md' | 'json' | 'prompt';
 
-export function ExportPanel({ chart, engine, solar }: Props) {
+export function ExportPanel({ chart, engine, solar, refs }: Props) {
   const [copied, setCopied] = useState<CopyKind | null>(null);
 
-  const md = chartToMarkdown(chart, engine, solar);
+  const md = chartToMarkdown(chart, engine, solar, refs);
 
   const doCopy = async (kind: CopyKind) => {
-    const text = kind === 'md' ? md : kind === 'json' ? chartToJson(chart, engine, solar) : generateQimenPrompt(md);
+    const text = kind === 'md' ? md : kind === 'json' ? chartToJson(chart, engine, solar, refs) : generateQimenPrompt(md);
     if (await copyText(text)) {
       setCopied(kind);
       setTimeout(() => setCopied(null), 2000);
@@ -50,7 +53,7 @@ export function ExportPanel({ chart, engine, solar }: Props) {
     <div className="space-y-3">
       <div className="flex items-center gap-1.5 text-xs text-green-400 bg-green-500/10 px-2.5 py-1.5 rounded-lg">
         <Sparkles className="w-3 h-3" />
-        已附排盘口径与地理/时间上下文，可直接喂 AI（MD 比 JSON 更省 token）
+        完整盘面 + 格局断语 + 典籍参考{refs?.length ? `（${refs.length} 条原文）` : ''} + 地理/时间口径，可直接喂 AI
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">

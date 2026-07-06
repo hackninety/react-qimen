@@ -40,6 +40,32 @@ describe('Markdown 导出', () => {
   });
 });
 
+describe('典籍参考随导出输出', () => {
+  const refs = [
+    { kind: '十干克应' as const, key: '戊+丙', gong: 4 as const, name: '青龙返首', text: '动作大吉，若逢迫、墓、击、刑，吉事成凶。', docPath: 'qmmj/book/juan02.md' },
+    { kind: '九星值时' as const, key: '天蓬值未时', text: '值未入宅凶……', docPath: 'qmmj/book/juan17.md' },
+  ];
+
+  it('MD 含典籍参考段与格局断语全文', () => {
+    const solar = resolveSolarTime(date, defaultSolarTimeSetting());
+    const md = chartToMarkdown(chart, engine, solar, refs);
+    expect(md).toContain('## 典籍参考（《奇門遁甲秘笈大全》2 条）');
+    expect(md).toContain('### 十干克应');
+    expect(md).toContain('**戊+丙**「青龙返首」（4宫）：动作大吉');
+    // 格局断语全文随 MD 输出（完整盘面）
+    const withNote = chart.patterns?.find((p) => p.note);
+    if (withNote) expect(md).toContain(withNote.note!.split('\n')[0]);
+  });
+
+  it('JSON 含典籍参考条目', () => {
+    const solar = resolveSolarTime(date, defaultSolarTimeSetting());
+    const parsed = JSON.parse(chartToJson(chart, engine, solar, refs));
+    expect(parsed['典籍参考']['条目']).toHaveLength(2);
+    expect(parsed['典籍参考']['条目'][0]['格名']).toBe('青龙返首');
+    expect(parsed['典籍参考']['条目'][0]['出处']).toBe('qmmj/book/juan02.md');
+  });
+});
+
 describe('JSON 导出', () => {
   it('结构完整且可解析，含排盘口径与九宫', () => {
     const solar = resolveSolarTime(date, defaultSolarTimeSetting());

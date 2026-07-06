@@ -8,6 +8,8 @@ import { cn } from '@/utils/cn';
 
 interface Props {
   onClose(): void;
+  /** 初始打开的文档 path（典籍参考深链） */
+  initialPath?: string;
 }
 
 /**
@@ -17,7 +19,7 @@ interface Props {
  * 首次打开才拉取载荷 chunk）；顶部全文检索（多词 AND），命中可跳原文。
  * 经 App 以 React.lazy 懒加载，react-markdown 与书卷不进首屏包。
  */
-export default function CanonDrawer({ onClose }: Props) {
+export default function CanonDrawer({ onClose, initialPath }: Props) {
   const manifest = useMemo(() => getDocsManifest(), []);
   const groups = useMemo(() => {
     const map = new Map<string, DocMeta[]>();
@@ -29,7 +31,7 @@ export default function CanonDrawer({ onClose }: Props) {
     return [...map.entries()];
   }, [manifest]);
 
-  const [activePath, setActivePath] = useState(manifest[0]?.path ?? '');
+  const [activePath, setActivePath] = useState(initialPath ?? manifest[0]?.path ?? '');
   const [loaded, setLoaded] = useState<{ path: string; md: string } | null>(null);
   const [query, setQuery] = useState('');
   const [hits, setHits] = useState<SearchHit[] | null>(null);

@@ -6,6 +6,7 @@
  */
 import type { QimenEngine, UnifiedQimenChart } from '@/engines/types';
 import { GONG_TRIGRAMS, GONG_DIRECTIONS } from '@/engines/types';
+import type { CanonRef } from '@/hooks/useCanonRefs';
 import type { SolarTimeResult } from './true-solar-time';
 import { formatOffset } from './true-solar-time';
 
@@ -32,8 +33,8 @@ function solarContext(solar: SolarTimeResult) {
   };
 }
 
-/** 完整 JSON 导出（不含引擎原始 raw 数据） */
-export function chartToJson(chart: UnifiedQimenChart, engine: QimenEngine, solar: SolarTimeResult): string {
+/** 完整 JSON 导出（不含引擎原始 raw 数据；refs 为按盘面检索到的典籍断语） */
+export function chartToJson(chart: UnifiedQimenChart, engine: QimenEngine, solar: SolarTimeResult, refs?: CanonRef[] | null): string {
   const m = chart.meta;
   const payload = {
     应用: 'react-qimen 奇门遁甲排盘',
@@ -82,12 +83,25 @@ export function chartToJson(chart: UnifiedQimenChart, engine: QimenEngine, solar
       吉凶: pt.kind,
       断语: pt.note,
     })),
+    典籍参考: refs?.length
+      ? {
+          说明: '《奇門遁甲秘笈大全》中与本盘干/门/星/神/时/格局直接对应的原文断语（qmdj-ts-lib 深度结构化检索）',
+          条目: refs.map((r) => ({
+            类别: r.kind,
+            键: r.key,
+            落宫: r.gong,
+            格名: r.name,
+            原文: r.text,
+            出处: r.docPath,
+          })),
+        }
+      : undefined,
   };
   return JSON.stringify(payload, null, 2);
 }
 
-/** 紧凑 Markdown 导出（适合投喂 AI，省 token；格局只列名称不展开断语） */
-export function chartToMarkdown(chart: UnifiedQimenChart, engine: QimenEngine, solar: SolarTimeResult): string {
+/** Markdown 导出（完整盘面：格局含断语全文、典籍参考含原文，供 AI 全面推理） */
+export function chartToMarkdown(chart: UnifiedQimenChart, engine: QimenEngine, solar: SolarTimeResult, refs?: CanonRef[] | null): string {
   const m = chart.meta;
   const lines: string[] = [];
 
@@ -124,11 +138,34 @@ export function chartToMarkdown(chart: UnifiedQimenChart, engine: QimenEngine, s
     lines.push('');
     lines.push(`## 格局（${chart.patterns.length}）`);
     for (const pt of chart.patterns) {
-      lines.push(`- ${pt.name}${pt.kind ? `（${pt.kind}${pt.gong ? `，${pt.gong}宫` : ''}）` : pt.gong ? `（${pt.gong}宫）` : ''}`);
+      lines.push(`- **${pt.name}**${pt.kind ? `（${pt.kind}${pt.gong ? `，${pt.gong}宫` : ''}）` : pt.gong ? `（${pt.gong}宫）` : ''}`);
+      if (pt.note) {
+        for (const noteLine of pt.note.split('\n').filter(Boolean)) {
+          lines.push(`  ${noteLine}`);
+        }
+      }
+    }
+  }
+
+  if (refs?.length) {
+    lines.push('');
+    lines.push(`## 典籍参考（《奇門遁甲秘笈大全》${refs.length} 条）`);
+    lines.push('');
+    lines.push('> 按本盘 干/门/星/神/时/格局 自动检索的原文断语（qmdj-ts-lib 深度结构化），供结合古法推理。');
+    let lastKind = '';
+    for (const r of refs) {
+      if (r.kind !== lastKind) {
+        lines.push('');
+        lines.push(`### ${r.kind}`);
+        lastKind = r.kind;
+      }
+      const head = `- **${r.key}**${r.name && r.name !== r.key ? `「${r.name}」` : ''}${r.gong ? `（${r.gong}宫）` : ''}`;
+      const body = r.text.split('\n').filter(Boolean).join(' ');
+      lines.push(`${head}：${body}`);
     }
   }
 
   lines.push('');
-  lines.push(`> 引擎：${engine.name}（npm: ${engine.pkg}，${engine.license}）· 流派口径见标题，不同流派结果勿混用`);
+  lines.push(`> 引擎：${engine.name}（npm: ${engine.pkg}，${engine.license}）· 流派口径见标题，不同流派结果勿混用 · 典籍出处 ctext.org res=953105`);
   return lines.join('\n');
 }

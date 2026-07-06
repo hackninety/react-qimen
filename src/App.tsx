@@ -11,6 +11,8 @@ import { AnalysisPanel } from './components/AnalysisPanel';
 import { GongDetailPanel } from './components/GongDetailPanel';
 import { PatternsPanel } from './components/PatternsPanel';
 import { ExportPanel } from './components/ExportPanel';
+import { CanonRefsPanel } from './components/CanonRefsPanel';
+import { useCanonRefs } from './hooks/useCanonRefs';
 import { fromInputValue, toInputValue } from './utils/datetime';
 import { defaultSolarTimeSetting, resolveSolarTime, type SolarTimeSetting } from './utils/true-solar-time';
 
@@ -43,7 +45,7 @@ export default function App() {
   const [engineId, setEngineId] = useState<QimenEngineId>(DEFAULT_ENGINE_ID);
   const [method, setMethod] = useState<JuMethod>('拆补');
   const [solarSetting, setSolarSetting] = useState<SolarTimeSetting>(defaultSolarTimeSetting);
-  const [canonOpen, setCanonOpen] = useState(false);
+  const [canon, setCanon] = useState<{ open: boolean; path?: string }>({ open: false });
   // 18:00~06:00 默认暗色
   const [isDark, setIsDark] = useState(() => {
     const h = new Date().getHours();
@@ -87,6 +89,9 @@ export default function App() {
     setMethod(resolveMethod(getQimenEngine(id), method));
   };
 
+  // 盘面 → 典籍参考（qmdj-ts-lib/keying 动态加载）
+  const canonRefs = useCanonRefs(result.ok ? result.chart : undefined);
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* 顶部导航 */}
@@ -103,9 +108,9 @@ export default function App() {
           </div>
           <div className="flex items-center gap-1.5">
             <button
-              onClick={() => setCanonOpen(true)}
+              onClick={() => setCanon({ open: true })}
               className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm hover:bg-secondary transition-colors"
-              title="《奇門遁甲秘笈大全》典籍库（33 篇 · 796 节 · 全文检索）"
+              title="《奇門遁甲秘笈大全》典籍库（33 篇 · 800 节 · 全文检索）"
             >
               <BookOpen className="w-4 h-4 text-[var(--color-gold)]" />
               <span className="hidden sm:inline">典籍</span>
@@ -177,6 +182,11 @@ export default function App() {
               </Section>
             )}
 
+            {/* 典籍参考 */}
+            <Section title={`典籍参考${canonRefs?.length ? `（${canonRefs.length}）` : ''}`} delay={0.22}>
+              <CanonRefsPanel refs={canonRefs} onOpenDoc={(path) => setCanon({ open: true, path })} />
+            </Section>
+
             {/* 九宫详解 */}
             <Section title="九宫详解" delay={0.25}>
               <GongDetailPanel chart={result.chart} />
@@ -184,7 +194,7 @@ export default function App() {
 
             {/* 数据导出 & AI 分析 */}
             <Section title="数据导出 & AI 分析" delay={0.3}>
-              <ExportPanel chart={result.chart} engine={engine} solar={solar} />
+              <ExportPanel chart={result.chart} engine={engine} solar={solar} refs={canonRefs} />
             </Section>
           </>
         )}
@@ -211,9 +221,9 @@ export default function App() {
         </div>
       </footer>
 
-      {canonOpen && (
+      {canon.open && (
         <Suspense fallback={null}>
-          <CanonDrawer onClose={() => setCanonOpen(false)} />
+          <CanonDrawer onClose={() => setCanon({ open: false })} initialPath={canon.path} />
         </Suspense>
       )}
     </div>
