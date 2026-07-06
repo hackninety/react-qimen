@@ -2,7 +2,8 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { BookOpen, ExternalLink, Moon, Sun } from 'lucide-react';
 import type { JuMethod, QimenEngineId, School, UnifiedQimenChart } from './engines/types';
-import { DEFAULT_ENGINE_ID, getQimenEngine, listEnginesBySchool, resolveMethod } from './engines/registry';
+import { DEFAULT_ENGINE_ID, getQimenEngine, listEnginesBySchool, listQimenEngines, resolveMethod } from './engines/registry';
+import { usePersistentState } from './hooks/usePersistentState';
 import { ControlBar } from './components/ControlBar';
 import { SolarTimeControl } from './components/SolarTimeControl';
 import { NinePalaceGrid } from './components/NinePalaceGrid';
@@ -40,17 +41,22 @@ function Section({ title, delay, children }: { title: string; delay: number; chi
 }
 
 export default function App() {
-  const [dateStr, setDateStr] = useState(() => toInputValue(new Date()));
-  const [school, setSchool] = useState<School>('时家转盘');
-  const [engineId, setEngineId] = useState<QimenEngineId>(DEFAULT_ENGINE_ID);
-  const [method, setMethod] = useState<JuMethod>('拆补');
-  const [solarSetting, setSolarSetting] = useState<SolarTimeSetting>(defaultSolarTimeSetting);
+  // 起局参数持久化（localStorage）：刷新后由引擎按同参数重算，不缓存派生盘面
+  const [dateStr, setDateStr] = usePersistentState('dateStr', () => toInputValue(new Date()), (v) => typeof v === 'string' && fromInputValue(v) !== null);
+  // 流派由引擎派生（engine.school），不单独持久化——保证脏数据回退后流派/引擎恒一致
+  const [engineId, setEngineId] = usePersistentState<QimenEngineId>('engineId', DEFAULT_ENGINE_ID, (v) => listQimenEngines().some((e) => e.id === v));
+  const [method, setMethod] = usePersistentState<JuMethod>('method', '拆补', (v) => typeof v === 'string');
+  const [solarSetting, setSolarSetting] = usePersistentState<SolarTimeSetting>('solarSetting', defaultSolarTimeSetting, (v) => typeof v === 'object' && v !== null && 'enabled' in v && 'mode' in v);
   const [canon, setCanon] = useState<{ open: boolean; path?: string }>({ open: false });
-  // 18:00~06:00 默认暗色
-  const [isDark, setIsDark] = useState(() => {
-    const h = new Date().getHours();
-    return h >= 18 || h < 6;
-  });
+  // 主题：存储优先，无存储时按时段（18:00~06:00 暗色）
+  const [isDark, setIsDark] = usePersistentState(
+    'isDark',
+    () => {
+      const h = new Date().getHours();
+      return h >= 18 || h < 6;
+    },
+    (v) => typeof v === 'boolean',
+  );
 
   useEffect(() => {
     const html = document.documentElement;
@@ -59,6 +65,7 @@ export default function App() {
   }, [isDark]);
 
   const engine = getQimenEngine(engineId);
+  const school: School = engine.school;
   const activeMethod = resolveMethod(engine, method);
 
   const solar = useMemo(() => {
@@ -76,10 +83,9 @@ export default function App() {
   }, [engine, dateStr, solar, activeMethod]);
 
   const handleSchoolChange = (s: School) => {
-    setSchool(s);
     const first = listEnginesBySchool(s)[0];
     if (first) {
-      setEngineId(first.id);
+      setEngineId(first.id); // school 随之派生为 s
       setMethod(first.methods[0]);
     }
   };
