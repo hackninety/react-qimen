@@ -1,5 +1,5 @@
 import type { UnifiedQimenChart } from '@/engines/types';
-import { GONG_NAMES, GONG_DIRECTIONS } from '@/engines/types';
+import { GONG_NAMES, GONG_DIRECTIONS, LUOSHU_GRID } from '@/engines/types';
 import { gateInfo, gateJiXiong, godInfo, JIXIONG_LABEL, starInfo } from '@/lib/reference';
 import { wuxingColor } from '@/utils/wuxing';
 import { cn } from '@/utils/cn';
@@ -15,8 +15,13 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
 
 export function GongDetailPanel({ chart }: { chart: UnifiedQimenChart }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-      {chart.palaces.map((p) => {
+    <div className="space-y-2">
+      <p className="hidden md:block text-[11px] text-muted-foreground/60">
+        卡片位置对应实际方位 · 上南下北 · 左东右西（与九宫盘一致）
+      </p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {LUOSHU_GRID.flat().map((gong) => {
+          const p = chart.palaces[gong - 1];
         const jx = gateJiXiong(p.gate);
         const star = starInfo(p.star);
         const gateMeaning = gateInfo(p.gate);
@@ -125,7 +130,8 @@ export function GongDetailPanel({ chart }: { chart: UnifiedQimenChart }) {
             </div>
           </div>
         );
-      })}
+        })}
+      </div>
     </div>
   );
 }
