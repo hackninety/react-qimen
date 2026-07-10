@@ -1,9 +1,16 @@
 import { motion } from 'framer-motion';
-import type { UnifiedQimenChart } from '@/engines/types';
+import type { GongIndex, UnifiedQimenChart } from '@/engines/types';
 import { LUOSHU_GRID } from '@/engines/types';
+import { cn } from '@/utils/cn';
 import { PalaceCell } from './PalaceCell';
 
-export function NinePalaceGrid({ chart }: { chart: UnifiedQimenChart }) {
+interface Props {
+  chart: UnifiedQimenChart;
+  /** 对照视图差异宫高亮 */
+  highlightGongs?: ReadonlySet<GongIndex>;
+}
+
+export function NinePalaceGrid({ chart, highlightGongs }: Props) {
   return (
     <div className="w-full">
       <div className="rounded-xl border border-border/50 overflow-hidden shadow-lg shadow-black/20">
@@ -11,6 +18,7 @@ export function NinePalaceGrid({ chart }: { chart: UnifiedQimenChart }) {
           {LUOSHU_GRID.flat().map((gong, index) => (
             <motion.div
               key={`${chart.engineId}-${gong}`}
+              className={cn(highlightGongs?.has(gong) && 'ring-2 ring-inset ring-amber-500/70')}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3, delay: index * 0.04, ease: 'easeOut' }}

@@ -10,7 +10,7 @@
  */
 import { getQimenEngine } from '@/engines/registry';
 import { GONG_TRIGRAMS } from '@/engines/types';
-import type { ComputeInput, QimenEngineId, UnifiedQimenChart } from '@/engines/types';
+import type { ComputeInput, GongIndex, QimenEngineId, UnifiedQimenChart } from '@/engines/types';
 
 export interface CrossCheckResult {
   referenceId: QimenEngineId;
@@ -19,6 +19,13 @@ export interface CrossCheckResult {
   scope: string;
   consistent: boolean;
   diffs: string[];
+}
+
+export interface ChartDiff {
+  consistent: boolean;
+  diffs: string[];
+  /** 存在差异的宫（供对照视图高亮） */
+  gongs: Set<GongIndex>;
 }
 
 const SCOPE = '阴阳遁与局数、值符值使、九宫天盘干/八门/九星/八神';
@@ -49,21 +56,13 @@ const intersects = (a: Set<string>, b: Set<string>) => [...a].some((v) => b.has(
 const subset = (a: Set<string>, b: Set<string>) => [...a].every((v) => b.has(v));
 
 /**
- * 与参照引擎交叉校验；无参照或参照排盘失败返回 null。
- * 天盘干按集合子集容差（寄宫并写差异不算不一致），星按 token 交集容差。
+ * 两盘核心要素对比（对照视图与交叉校验共用）。
+ * 天盘干按集合子集容差（寄宫并写差异不算不一致），星按 token 交集容差，
+ * 八神按别名/异体归一后比较；差异宫号收入 gongs 供高亮。
  */
-export function crossCheckChart(chart: UnifiedQimenChart, input: ComputeInput): CrossCheckResult | null {
-  const refId = pickReference(chart);
-  if (!refId) return null;
-  const refEngine = getQimenEngine(refId);
-  let ref: UnifiedQimenChart;
-  try {
-    ref = refEngine.compute({ ...input, layer: '时家' });
-  } catch {
-    return null;
-  }
-
+export function diffCharts(chart: UnifiedQimenChart, ref: UnifiedQimenChart): ChartDiff {
   const diffs: string[] = [];
+  const gongs = new Set<GongIndex>();
   const a = chart.meta;
   const b = ref.meta;
   if (a.dun !== b.dun || a.ju !== b.ju) diffs.push(`局：${a.dun}${a.ju}局 vs ${b.dun}${b.ju}局`);
@@ -77,24 +76,46 @@ export function crossCheckChart(chart: UnifiedQimenChart, input: ComputeInput): 
     const pb = ref.palaces[i];
     if (!pa || !pb) continue;
     const gongName = `${GONG_TRIGRAMS[pa.gong]}${pa.gong}宫`;
+    const mark = (text: string) => {
+      diffs.push(text);
+      gongs.add(pa.gong);
+    };
 
     const ta = new Set(pa.tianPanGan);
     const tb = new Set(pb.tianPanGan);
     if (!(subset(ta, tb) || subset(tb, ta))) {
-      diffs.push(`${gongName}天盘干：${pa.tianPanGan.join('') || '—'} vs ${pb.tianPanGan.join('') || '—'}`);
+      mark(`${gongName}天盘干：${pa.tianPanGan.join('') || '—'} vs ${pb.tianPanGan.join('') || '—'}`);
     }
-    if (pa.gate && pb.gate && pa.gate !== pb.gate) diffs.push(`${gongName}八门：${pa.gate} vs ${pb.gate}`);
+    if (pa.gate && pb.gate && pa.gate !== pb.gate) mark(`${gongName}八门：${pa.gate} vs ${pb.gate}`);
     const sa = starTokens(pa.star);
     const sb = starTokens(pb.star);
-    if (sa.size && sb.size && !intersects(sa, sb)) diffs.push(`${gongName}九星：${pa.star} vs ${pb.star}`);
-    if (pa.god && pb.god && god(pa.god) !== god(pb.god)) diffs.push(`${gongName}八神：${pa.god} vs ${pb.god}`);
+    if (sa.size && sb.size && !intersects(sa, sb)) mark(`${gongName}九星：${pa.star} vs ${pb.star}`);
+    if (pa.god && pb.god && god(pa.god) !== god(pb.god)) mark(`${gongName}八神：${pa.god} vs ${pb.god}`);
   }
 
+  return { consistent: diffs.length === 0, diffs, gongs };
+}
+
+/**
+ * 与参照引擎交叉校验；无参照或参照排盘失败返回 null。
+ */
+export function crossCheckChart(chart: UnifiedQimenChart, input: ComputeInput): CrossCheckResult | null {
+  const refId = pickReference(chart);
+  if (!refId) return null;
+  const refEngine = getQimenEngine(refId);
+  let ref: UnifiedQimenChart;
+  try {
+    ref = refEngine.compute({ ...input, layer: '时家' });
+  } catch {
+    return null;
+  }
+
+  const { consistent, diffs } = diffCharts(chart, ref);
   return {
     referenceId: refId,
     referenceName: refEngine.name,
     scope: SCOPE,
-    consistent: diffs.length === 0,
+    consistent,
     diffs,
   };
 }

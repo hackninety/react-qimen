@@ -7,6 +7,8 @@ import { DEFAULT_ENGINE_ID, getQimenEngine, listEnginesByLayer, listEnginesBySch
 import { usePersistentState } from './hooks/usePersistentState';
 import { ControlBar } from './components/ControlBar';
 import { SolarTimeControl } from './components/SolarTimeControl';
+import { ArchivePanel } from './components/ArchivePanel';
+import { CompareView } from './components/CompareView';
 import { NinePalaceGrid } from './components/NinePalaceGrid';
 import { BasicInfoPanel } from './components/BasicInfoPanel';
 import { AnalysisPanel } from './components/AnalysisPanel';
@@ -18,6 +20,7 @@ import { InquiryBar } from './components/InquiryBar';
 import { useCanonRefs } from './hooks/useCanonRefs';
 import { useZhanFa } from './hooks/useZhanFa';
 import { TOPICS } from './lib/yongshen-rules';
+import { insertEntry, isArchiveList, makeArchiveEntry, removeEntry, type ArchiveEntry } from './utils/archive';
 import { crossCheckChart } from './utils/cross-check';
 import { buildRelations } from './utils/relations';
 import { locateYongShen } from './utils/yongshen';
@@ -59,6 +62,8 @@ export default function App() {
   const [topicId, setTopicId] = usePersistentState<string>('topicId', '综合', (v) => TOPICS.some((t) => t.id === v));
   const [subject, setSubject] = usePersistentState<string>('subject', '', (v) => typeof v === 'string');
   const [birthYear, setBirthYear] = usePersistentState<string>('birthYear', '', (v) => typeof v === 'string');
+  // 历史盘存档：只存起局参数，载入时重算（上限 50 条）
+  const [archive, setArchive] = usePersistentState<ArchiveEntry[]>('archive', [], isArchiveList);
   const [canon, setCanon] = useState<{ open: boolean; path?: string }>({ open: false });
   // 主题：存储优先，无存储时按时段（18:00~06:00 暗色）
   const [isDark, setIsDark] = usePersistentState(
@@ -118,6 +123,26 @@ export default function App() {
   const handleEngineChange = (id: QimenEngineId) => {
     setEngineId(id);
     setMethod(resolveMethod(getQimenEngine(id), method));
+  };
+
+  const handleArchiveSave = () => {
+    if (!result.ok) return;
+    const entry = makeArchiveEntry(
+      { dateStr, layer: activeLayer, engineId, method: activeMethod, solarSetting, topicId, subject, birthYear },
+      result.chart,
+    );
+    setArchive((list) => insertEntry(list, entry));
+  };
+
+  const handleArchiveLoad = (e: ArchiveEntry) => {
+    setDateStr(e.dateStr);
+    setLayer(e.layer);
+    setEngineId(e.engineId);
+    setMethod(e.method);
+    setSolarSetting(e.solarSetting);
+    setTopicId(e.topicId);
+    setSubject(e.subject);
+    setBirthYear(e.birthYear);
   };
 
   // 盘面 → 典籍参考（qmdj-ts-lib/keying 动态加载）
@@ -215,6 +240,16 @@ export default function App() {
           </div>
         </Section>
 
+        {/* 历史盘存档 */}
+        <Section title={`历史盘存档${archive.length ? `（${archive.length}）` : ''}`} delay={0.03}>
+          <ArchivePanel
+            entries={archive}
+            onSave={handleArchiveSave}
+            onLoad={handleArchiveLoad}
+            onDelete={(id) => setArchive((list) => removeEntry(list, id))}
+          />
+        </Section>
+
         {/* 双引擎校验：不一致时醒目提示，一致时静默增信一行 */}
         {result.ok && crossCheck && (
           crossCheck.consistent ? (
@@ -257,6 +292,11 @@ export default function App() {
                 <NinePalaceGrid chart={result.chart} />
               </div>
             </motion.div>
+
+            {/* 多引擎对照：同刻两盘并排，差异宫高亮 */}
+            <Section title="多引擎对照" delay={0.12}>
+              <CompareView chart={result.chart} date={solar.date} />
+            </Section>
 
             {/* 断局指引（含用神定位） */}
             <Section title="断局指引" delay={0.15}>
