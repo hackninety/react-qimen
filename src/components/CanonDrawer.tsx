@@ -13,11 +13,12 @@ interface Props {
 }
 
 /**
- * 典籍库抽屉 —— 《奇門遁甲秘笈大全》（附《金函玉鏡》残卷）
+ * 典籍库抽屉 —— 五部书：《奇門遁甲秘笈大全》（附《金函玉鏡》残卷）、
+ * 《遁甲演義》（四庫本）、《奇門遁甲統宗》、《奇门宝鉴（御定）》
  *
- * 篇目来自 qmdj-ts-lib manifest（按 book 分组）；正文异步取（按书分包，
- * 首次打开才拉取载荷 chunk）；顶部全文检索（多词 AND），命中可跳原文。
- * 经 App 以 React.lazy 懒加载，react-markdown 与书卷不进首屏包。
+ * 篇目来自 qmdj-ts-lib manifest（按 book 分组，新书入库自动成组）；
+ * 正文异步取（按书分包，首次打开才拉取载荷 chunk）；顶部全文检索
+ * （多词 AND），命中可跳原文。经 App 以 React.lazy 懒加载。
  */
 export default function CanonDrawer({ onClose, initialPath }: Props) {
   const manifest = useMemo(() => getDocsManifest(), []);

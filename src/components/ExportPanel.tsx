@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Bot, Check, Copy, Download, FileJson, Sparkles } from 'lucide-react';
+import { Bot, Check, Copy, Download, FileCode2, Sparkles } from 'lucide-react';
 import type { QimenEngine, UnifiedQimenChart } from '@/engines/types';
 import { getTopic } from '@/lib/yongshen-rules';
 import type { SolarTimeResult } from '@/utils/true-solar-time';
-import { chartToJson, chartToMarkdown, type ExportExtra } from '@/utils/export';
+import { chartToMarkdown, chartToToon, type ExportExtra } from '@/utils/export';
 import { generateQimenPrompt } from '@/utils/prompt-template';
 import { copyText } from '@/utils/clipboard';
 import { cn } from '@/utils/cn';
@@ -16,7 +16,7 @@ interface Props {
   extra: ExportExtra;
 }
 
-type CopyKind = 'md' | 'json' | 'prompt';
+type CopyKind = 'md' | 'toon' | 'prompt';
 
 export function ExportPanel({ chart, engine, solar, extra }: Props) {
   const [copied, setCopied] = useState<CopyKind | null>(null);
@@ -28,21 +28,21 @@ export function ExportPanel({ chart, engine, solar, extra }: Props) {
 
   const doCopy = async (kind: CopyKind) => {
     const text =
-      kind === 'md' ? md : kind === 'json' ? chartToJson(chart, engine, solar, extra) : generateQimenPrompt(md, promptInquiry);
+      kind === 'md' ? md : kind === 'toon' ? chartToToon(chart, engine, solar, extra) : generateQimenPrompt(md, promptInquiry);
     if (await copyText(text)) {
       setCopied(kind);
       setTimeout(() => setCopied(null), 2000);
     }
   };
 
-  const doDownload = () => {
-    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+  const doDownload = (content: string, ext: string, mime: string) => {
+    const blob = new Blob([content], { type: `${mime};charset=utf-8` });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     const d = solar.date;
     const pad = (n: number) => String(n).padStart(2, '0');
     a.href = url;
-    a.download = `qimen_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.md`;
+    a.download = `qimen_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.${ext}`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -60,18 +60,30 @@ export function ExportPanel({ chart, engine, solar, extra }: Props) {
         盘面 + 用神定位 + 预计算生克 + 占法古法{extra.refs?.length ? ` + 典籍参考 ${extra.refs.length} 条` : ''}，AI 可按六步法直接推理
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <button onClick={doDownload} className={cn(btnBase, btnPlain)}>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+        <button onClick={() => doDownload(md, 'md', 'text/markdown')} className={cn(btnBase, btnPlain)}>
           <Download className="w-3.5 h-3.5" />
           下载 MD
+        </button>
+        <button
+          onClick={() => doDownload(chartToToon(chart, engine, solar, extra), 'toon', 'text/plain')}
+          className={cn(btnBase, btnPlain)}
+          title="TOON（Token-Oriented Object Notation）：与 JSON 同构、喂 LLM 更省 token 的结构化格式"
+        >
+          <Download className="w-3.5 h-3.5" />
+          下载 TOON
         </button>
         <button onClick={() => doCopy('md')} className={cn(btnBase, btnPlain, copied === 'md' && 'text-green-400 border-green-500/40')}>
           {copied === 'md' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
           {copied === 'md' ? '已复制' : '复制 MD'}
         </button>
-        <button onClick={() => doCopy('json')} className={cn(btnBase, btnPlain, copied === 'json' && 'text-green-400 border-green-500/40')}>
-          {copied === 'json' ? <Check className="w-3.5 h-3.5" /> : <FileJson className="w-3.5 h-3.5" />}
-          {copied === 'json' ? '已复制' : '复制 JSON'}
+        <button
+          onClick={() => doCopy('toon')}
+          className={cn(btnBase, btnPlain, copied === 'toon' && 'text-green-400 border-green-500/40')}
+          title="TOON（Token-Oriented Object Notation）：与 JSON 同构、喂 LLM 更省 token 的结构化格式"
+        >
+          {copied === 'toon' ? <Check className="w-3.5 h-3.5" /> : <FileCode2 className="w-3.5 h-3.5" />}
+          {copied === 'toon' ? '已复制' : '复制 TOON'}
         </button>
         <button
           onClick={() => doCopy('prompt')}

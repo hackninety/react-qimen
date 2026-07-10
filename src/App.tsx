@@ -169,7 +169,7 @@ export default function App() {
             <button
               onClick={() => setCanon({ open: true })}
               className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm hover:bg-secondary transition-colors"
-              title="《奇門遁甲秘笈大全》典籍库（33 篇 · 800 节 · 全文检索）"
+              title="典籍库：秘笈大全 · 遁甲演義 · 統宗 · 宝鉴（45 篇 · 997 节 · 全文检索）"
             >
               <BookOpen className="w-4 h-4 text-[var(--color-gold)]" />
               <span className="hidden sm:inline">典籍</span>

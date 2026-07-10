@@ -1,7 +1,8 @@
+import { decode as toonDecode } from '@toon-format/toon';
 import { describe, expect, it } from 'vitest';
 import { getQimenEngine } from '@/engines/registry';
 import { crossCheckChart } from '../cross-check';
-import { chartToJson, chartToMarkdown } from '../export';
+import { chartToJson, chartToMarkdown, chartToToon } from '../export';
 import { buildRelations } from '../relations';
 import { locateYongShen } from '../yongshen';
 import { defaultSolarTimeSetting, resolveSolarTime } from '../true-solar-time';
@@ -52,7 +53,7 @@ describe('典籍参考随导出输出', () => {
   it('MD 含典籍参考段与格局断语全文', () => {
     const solar = resolveSolarTime(date, defaultSolarTimeSetting());
     const md = chartToMarkdown(chart, engine, solar, { refs });
-    expect(md).toContain('## 典籍参考（《奇門遁甲秘笈大全》2 条）');
+    expect(md).toContain('## 典籍参考（2 条，多书互证）');
     expect(md).toContain('### 十干克应');
     expect(md).toContain('**戊+丙**「青龙返首」（4宫）：动作大吉');
     // 格局断语全文随 MD 输出（完整盘面）
@@ -139,6 +140,30 @@ describe('JSON 导出', () => {
     expect(parsed['局']['值符']).toBe('天柱');
     expect(parsed['真太阳时']['启用']).toBe(false);
     expect(parsed['时间']['四柱']['day']).toBe('庚戌');
+  });
+});
+
+describe('TOON 导出', () => {
+  const solar = resolveSolarTime(date, defaultSolarTimeSetting());
+
+  it('与 JSON 同源同构：TOON 解码后与 JSON 解析结果深等', () => {
+    const extra = {
+      relations: buildRelations(chart),
+      inquiry: { topicId: '求财', subject: '能否谈成合作', yongshen: locateYongShen(chart, '求财') },
+      crossCheck: crossCheckChart(chart, { date, method: '拆补' }),
+    };
+    const toon = chartToToon(chart, engine, solar, extra);
+    const json = JSON.parse(chartToJson(chart, engine, solar, extra));
+    expect(toonDecode(toon)).toEqual(json);
+  });
+
+  it('比 JSON 更省字符（喂 LLM 省 token）且含核心盘面要素', () => {
+    const toon = chartToToon(chart, engine, solar);
+    const json = chartToJson(chart, engine, solar);
+    expect(toon.length).toBeLessThan(json.length);
+    expect(toon).toContain('天柱');
+    expect(toon).toContain('庚戌');
+    expect(toon).toContain('晚子时口径');
   });
 });
 

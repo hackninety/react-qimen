@@ -69,7 +69,8 @@ export function CanonRefsPanel({ refs, onOpenDoc }: Props) {
         ))}
       </ul>
       <p className="text-[11px] text-muted-foreground/60">
-        出自《奇門遁甲秘笈大全》（qmdj-ts-lib 深度结构化，按本盘 干/门/星/神/时/格局 自动检索）；点击书页图标查看原文全卷。
+        出自《秘笈大全》《遁甲演義》《統宗》《宝鉴》典籍库（qmdj-ts-lib 深度结构化，按本盘
+        干/门/星/神/时/格局 自动检索，同格多书断语并出）；点击书页图标查看原文全卷。
       </p>
     </div>
   );

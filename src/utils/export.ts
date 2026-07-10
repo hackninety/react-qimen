@@ -1,9 +1,12 @@
 /**
- * 盘面导出：Markdown 与 JSON（完整盘面，供 AI 全面推理）。
+ * 盘面导出：Markdown / JSON / TOON（完整盘面，供 AI 全面推理）。
  *
  * 除排盘口径与地理/时间上下文外，还携带断盘方法论素材：
  * 所占何事 + 用神定位状态 + 机器预计算生克 + 该占类古法原文 + 典籍参考。
+ * TOON（Token-Oriented Object Notation）与 JSON 同源同构，均出自
+ * buildExportPayload；TOON 对均匀数组按表格编码，喂 LLM 更省 token。
  */
+import { encode as toonEncode } from '@toon-format/toon';
 import type { QimenEngine, UnifiedQimenChart } from '@/engines/types';
 import { GONG_TRIGRAMS, GONG_DIRECTIONS } from '@/engines/types';
 import type { CanonRef } from '@/hooks/useCanonRefs';
@@ -54,11 +57,11 @@ function solarContext(solar: SolarTimeResult) {
   };
 }
 
-/** 完整 JSON 导出（不含引擎原始 raw 数据） */
-export function chartToJson(chart: UnifiedQimenChart, engine: QimenEngine, solar: SolarTimeResult, extra?: ExportExtra): string {
+/** 结构化导出载荷（JSON 与 TOON 共用；不含引擎原始 raw 数据） */
+function buildExportPayload(chart: UnifiedQimenChart, engine: QimenEngine, solar: SolarTimeResult, extra?: ExportExtra) {
   const { refs, relations, inquiry, zhanfa, crossCheck } = extra ?? {};
   const m = chart.meta;
-  const payload = {
+  return {
     应用: 'react-qimen 奇门遁甲排盘',
     排盘口径: {
       盘类: chart.layer,
@@ -157,7 +160,7 @@ export function chartToJson(chart: UnifiedQimenChart, engine: QimenEngine, solar
       : undefined,
     典籍参考: refs?.length
       ? {
-          说明: '《奇門遁甲秘笈大全》中与本盘干/门/星/神/时/格局直接对应的原文断语（qmdj-ts-lib 深度结构化检索）',
+          说明: '《秘笈大全》《遁甲演義》《統宗》《宝鉴》中与本盘干/门/星/神/时/格局直接对应的原文断语（qmdj-ts-lib 深度结构化检索，同格多书断语并出，出处见各条）',
           条目: refs.map((r) => ({
             类别: r.kind,
             键: r.key,
@@ -170,7 +173,20 @@ export function chartToJson(chart: UnifiedQimenChart, engine: QimenEngine, solar
         }
       : undefined,
   };
-  return JSON.stringify(payload, null, 2);
+}
+
+/** 完整 JSON 导出 */
+export function chartToJson(chart: UnifiedQimenChart, engine: QimenEngine, solar: SolarTimeResult, extra?: ExportExtra): string {
+  return JSON.stringify(buildExportPayload(chart, engine, solar, extra), null, 2);
+}
+
+/**
+ * 完整 TOON 导出（与 JSON 同一载荷）。
+ * 先 JSON 往返一次以按 JSON 语义剔除 undefined 字段，再交 TOON 编码。
+ */
+export function chartToToon(chart: UnifiedQimenChart, engine: QimenEngine, solar: SolarTimeResult, extra?: ExportExtra): string {
+  const normalized = JSON.parse(JSON.stringify(buildExportPayload(chart, engine, solar, extra)));
+  return toonEncode(normalized);
 }
 
 /** Markdown 导出（完整盘面：用神/生克/古法/典籍随附，供 AI 分步推理） */
@@ -293,9 +309,9 @@ export function chartToMarkdown(chart: UnifiedQimenChart, engine: QimenEngine, s
 
   if (refs?.length) {
     lines.push('');
-    lines.push(`## 典籍参考（《奇門遁甲秘笈大全》${refs.length} 条）`);
+    lines.push(`## 典籍参考（${refs.length} 条，多书互证）`);
     lines.push('');
-    lines.push('> 按本盘 干/门/星/神/时/格局 自动检索的原文断语（qmdj-ts-lib 深度结构化），供结合古法推理。');
+    lines.push('> 按本盘 干/门/星/神/时/格局 自动检索的原文断语（《秘笈大全》《遁甲演義》《統宗》《宝鉴》，qmdj-ts-lib 深度结构化）。同名格局多书断语并出，出处路径首段为书（qmmj/dyyy/tz/bj），可互证参断。');
     let lastKind = '';
     for (const r of refs) {
       if (r.kind !== lastKind) {
@@ -310,6 +326,6 @@ export function chartToMarkdown(chart: UnifiedQimenChart, engine: QimenEngine, s
   }
 
   lines.push('');
-  lines.push(`> 引擎：${engine.name}（npm: ${engine.pkg}，${engine.license}）· 晚子时口径：${engine.lateZi} · 流派口径见标题，不同流派结果勿混用 · 典籍出处 ctext.org res=953105`);
+  lines.push(`> 引擎：${engine.name}（npm: ${engine.pkg}，${engine.license}）· 晚子时口径：${engine.lateZi} · 流派口径见标题，不同流派结果勿混用 · 典籍底本：ctext.org res=953105（秘笈大全）+ 维基文库（演義/統宗/宝鉴）`);
   return lines.join('\n');
 }
