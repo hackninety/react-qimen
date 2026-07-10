@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Bot, Check, Copy, Download, FileJson, Sparkles } from 'lucide-react';
 import type { QimenEngine, UnifiedQimenChart } from '@/engines/types';
-import type { CanonRef } from '@/hooks/useCanonRefs';
+import { getTopic } from '@/lib/yongshen-rules';
 import type { SolarTimeResult } from '@/utils/true-solar-time';
-import { chartToJson, chartToMarkdown } from '@/utils/export';
+import { chartToJson, chartToMarkdown, type ExportExtra } from '@/utils/export';
 import { generateQimenPrompt } from '@/utils/prompt-template';
 import { copyText } from '@/utils/clipboard';
 import { cn } from '@/utils/cn';
@@ -12,19 +12,23 @@ interface Props {
   chart: UnifiedQimenChart;
   engine: QimenEngine;
   solar: SolarTimeResult;
-  /** 盘面典籍参考（随导出一并输出） */
-  refs?: CanonRef[] | null;
+  /** 导出附加素材：典籍参考/生克关系/所占用神/占法要旨 */
+  extra: ExportExtra;
 }
 
 type CopyKind = 'md' | 'json' | 'prompt';
 
-export function ExportPanel({ chart, engine, solar, refs }: Props) {
+export function ExportPanel({ chart, engine, solar, extra }: Props) {
   const [copied, setCopied] = useState<CopyKind | null>(null);
 
-  const md = chartToMarkdown(chart, engine, solar, refs);
+  const md = chartToMarkdown(chart, engine, solar, extra);
+  const promptInquiry = extra.inquiry
+    ? { topicLabel: getTopic(extra.inquiry.topicId).label, subject: extra.inquiry.subject }
+    : undefined;
 
   const doCopy = async (kind: CopyKind) => {
-    const text = kind === 'md' ? md : kind === 'json' ? chartToJson(chart, engine, solar, refs) : generateQimenPrompt(md);
+    const text =
+      kind === 'md' ? md : kind === 'json' ? chartToJson(chart, engine, solar, extra) : generateQimenPrompt(md, promptInquiry);
     if (await copyText(text)) {
       setCopied(kind);
       setTimeout(() => setCopied(null), 2000);
@@ -53,7 +57,7 @@ export function ExportPanel({ chart, engine, solar, refs }: Props) {
     <div className="space-y-3">
       <div className="flex items-center gap-1.5 text-xs text-green-400 bg-green-500/10 px-2.5 py-1.5 rounded-lg">
         <Sparkles className="w-3 h-3" />
-        完整盘面 + 格局断语 + 典籍参考{refs?.length ? `（${refs.length} 条原文）` : ''} + 地理/时间口径，可直接喂 AI
+        盘面 + 用神定位 + 预计算生克 + 占法古法{extra.refs?.length ? ` + 典籍参考 ${extra.refs.length} 条` : ''}，AI 可按六步法直接推理
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">

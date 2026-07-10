@@ -1,13 +1,59 @@
-import { Compass, ShieldAlert, Sparkles, Info } from 'lucide-react';
+import { Compass, ShieldAlert, Sparkles, Info, Crosshair } from 'lucide-react';
 import type { UnifiedQimenChart } from '@/engines/types';
+import type { YongShenReport } from '@/utils/yongshen';
 import { buildGuidance } from '@/utils/analysis';
 import { wuxingColor } from '@/utils/wuxing';
+import { cn } from '@/utils/cn';
 
-export function AnalysisPanel({ chart }: { chart: UnifiedQimenChart }) {
+function YongShenBlock({ report }: { report: YongShenReport }) {
+  return (
+    <div className="rounded-lg border border-[var(--color-gold)]/20 bg-[var(--color-gold)]/5 p-3">
+      <p className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Crosshair size={13} className="text-[var(--color-gold)]" />
+        用神定位 · {report.topicLabel}
+        {report.note && <span className="text-muted-foreground/60">（{report.note}）</span>}
+      </p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="text-left text-muted-foreground/70 border-b border-border/40">
+              <th className="py-1 pr-2 font-normal">用神</th>
+              <th className="py-1 pr-2 font-normal">落宫</th>
+              <th className="py-1 pr-2 font-normal">同宫组合</th>
+              <th className="py-1 pr-2 font-normal">状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            {report.entries.map((e, i) => (
+              <tr key={i} className="border-b border-border/20 last:border-b-0 align-top">
+                <td className="py-1 pr-2 whitespace-nowrap">
+                  <span className="text-foreground/90">{e.role}</span>
+                  <b className="ml-1 font-serif" style={{ color: wuxingColor(e.symbol) }}>{e.symbol}</b>
+                </td>
+                <td className={cn('py-1 pr-2 whitespace-nowrap', e.missing && 'text-muted-foreground/60')}>
+                  {e.missing ? '盘面未见' : `${e.gong}宫·${e.direction}`}
+                </td>
+                <td className="py-1 pr-2 text-muted-foreground">{e.cohabit ?? '—'}</td>
+                <td className="py-1 text-muted-foreground">
+                  {[e.wangShuai && `旺衰:${e.wangShuai}`, e.gongRelation, e.vsDayGong, e.marks?.join('·')]
+                    .filter(Boolean)
+                    .join('；') || '—'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+export function AnalysisPanel({ chart, yongshen }: { chart: UnifiedQimenChart; yongshen?: YongShenReport }) {
   const g = buildGuidance(chart);
 
   return (
     <div className="space-y-4">
+      {yongshen && <YongShenBlock report={yongshen} />}
       {/* 吉门方位 */}
       {g.luckyGates.length > 0 && (
         <div className="flex items-start gap-3 p-3 rounded-lg bg-[var(--color-gold)]/10 border border-[var(--color-gold)]/20">

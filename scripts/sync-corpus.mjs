@@ -13,19 +13,21 @@ import { readFileSync, writeFileSync } from 'node:fs';
 console.log('▶ 拉取 qmdj-ts-lib main 最新…');
 execSync('npm install qmdj-ts-lib --no-fund --no-audit', { stdio: 'inherit' });
 
-const LOCK = 'package-lock.json';
-const before = readFileSync(LOCK, 'utf8');
-const after = before.replaceAll(
-  'git+ssh://git@github.com/hackninety/qmdj-ts-lib.git',
-  'git+https://github.com/hackninety/qmdj-ts-lib.git',
-);
-if (after !== before) {
-  writeFileSync(LOCK, after);
-  console.log('✓ 已将 lockfile 中 qmdj-ts-lib 源协议修正为 https');
-} else {
-  console.log('✓ lockfile 协议已是 https');
+// npm 会把 spec 规范化为 github: 简写、resolved 写成 git+ssh，统一改回显式 git+https
+for (const file of ['package.json', 'package-lock.json']) {
+  const before = readFileSync(file, 'utf8');
+  const after = before
+    .replaceAll('git+ssh://git@github.com/hackninety/qmdj-ts-lib.git', 'git+https://github.com/hackninety/qmdj-ts-lib.git')
+    .replaceAll('"github:hackninety/qmdj-ts-lib#main"', '"git+https://github.com/hackninety/qmdj-ts-lib.git#main"');
+  if (after !== before) {
+    writeFileSync(file, after);
+    console.log(`✓ ${file} 中 qmdj-ts-lib 源已统一为 git+https`);
+  } else {
+    console.log(`✓ ${file} 已是 git+https`);
+  }
 }
 
-const commit = (after.match(/qmdj-ts-lib\.git#([0-9a-f]{7,40})/) ?? [])[1];
+const lock = readFileSync('package-lock.json', 'utf8');
+const commit = (lock.match(/qmdj-ts-lib\.git#([0-9a-f]{7,40})/) ?? [])[1];
 console.log(`\n完成。当前锁定 commit: ${commit ?? '(未识别)'}`);
-console.log('下一步：npm run build 验证后，提交 package-lock.json 即可触发云端用新语料构建。');
+console.log('下一步：npm run build 验证后，提交 package.json 与 package-lock.json 即可触发云端用新语料构建。');

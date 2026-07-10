@@ -78,6 +78,13 @@ function compute({ date }: ComputeInput): UnifiedQimenChart {
       };
     });
 
+  // 上游 postHorse.position 为字符串（'2'），其 isPostHorse 与数字宫位严格比较恒 false，
+  // 马星标记在宫位上丢失——按落宫号兜底补标
+  const maGong = Number(chart.postHorse?.position);
+  if (maGong >= 1 && maGong <= 9 && !palaces[maGong - 1].marks.includes('马星')) {
+    palaces[maGong - 1].marks.push('马星');
+  }
+
   const sp = chart.specialPatterns ?? {};
   const patterns: PatternHit[] = [
     ...mapPatterns(sp.auspiciousPatterns, '吉'),

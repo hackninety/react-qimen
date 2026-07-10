@@ -14,7 +14,12 @@ import { GongDetailPanel } from './components/GongDetailPanel';
 import { PatternsPanel } from './components/PatternsPanel';
 import { ExportPanel } from './components/ExportPanel';
 import { CanonRefsPanel } from './components/CanonRefsPanel';
+import { InquiryBar } from './components/InquiryBar';
 import { useCanonRefs } from './hooks/useCanonRefs';
+import { useZhanFa } from './hooks/useZhanFa';
+import { TOPICS } from './lib/yongshen-rules';
+import { buildRelations } from './utils/relations';
+import { locateYongShen } from './utils/yongshen';
 import { fromInputValue, toInputValue } from './utils/datetime';
 import { defaultSolarTimeSetting, resolveSolarTime, type SolarTimeSetting } from './utils/true-solar-time';
 
@@ -49,6 +54,9 @@ export default function App() {
   const [engineId, setEngineId] = usePersistentState<QimenEngineId>('engineId', DEFAULT_ENGINE_ID, (v) => listQimenEngines().some((e) => e.id === v));
   const [method, setMethod] = usePersistentState<JuMethod>('method', '拆补', (v) => typeof v === 'string');
   const [solarSetting, setSolarSetting] = usePersistentState<SolarTimeSetting>('solarSetting', defaultSolarTimeSetting, (v) => typeof v === 'object' && v !== null && 'enabled' in v && 'mode' in v);
+  // 所占何事：占类决定用神取用与注入的古法
+  const [topicId, setTopicId] = usePersistentState<string>('topicId', '综合', (v) => TOPICS.some((t) => t.id === v));
+  const [subject, setSubject] = usePersistentState<string>('subject', '', (v) => typeof v === 'string');
   const [canon, setCanon] = useState<{ open: boolean; path?: string }>({ open: false });
   // 主题：存储优先，无存储时按时段（18:00~06:00 暗色）
   const [isDark, setIsDark] = usePersistentState(
@@ -112,6 +120,20 @@ export default function App() {
 
   // 盘面 → 典籍参考（qmdj-ts-lib/keying 动态加载）
   const canonRefs = useCanonRefs(result.ok ? result.chart : undefined);
+  // 占类 → 古法原文（qmdj-ts-lib/zhanmu 动态加载）
+  const zhanfa = useZhanFa(topicId);
+  // 用神定位与生克预计算（同步纯函数）
+  const yongshen = useMemo(() => (result.ok ? locateYongShen(result.chart, topicId) : null), [result, topicId]);
+  const relations = useMemo(() => (result.ok ? buildRelations(result.chart) : null), [result]);
+  const exportExtra = useMemo(
+    () => ({
+      refs: canonRefs,
+      relations,
+      inquiry: yongshen ? { topicId, subject: subject.trim() || undefined, yongshen } : null,
+      zhanfa,
+    }),
+    [canonRefs, relations, yongshen, topicId, subject, zhanfa],
+  );
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -166,6 +188,7 @@ export default function App() {
               onMethodChange={setMethod}
             />
             <SolarTimeControl setting={solarSetting} result={solar} onChange={setSolarSetting} />
+            <InquiryBar topicId={topicId} subject={subject} onTopicChange={setTopicId} onSubjectChange={setSubject} />
           </div>
         </Section>
 
@@ -193,9 +216,9 @@ export default function App() {
               </div>
             </motion.div>
 
-            {/* 断局指引 */}
+            {/* 断局指引（含用神定位） */}
             <Section title="断局指引" delay={0.15}>
-              <AnalysisPanel chart={result.chart} />
+              <AnalysisPanel chart={result.chart} yongshen={yongshen ?? undefined} />
             </Section>
 
             {/* 格局 */}
@@ -217,7 +240,7 @@ export default function App() {
 
             {/* 数据导出 & AI 分析 */}
             <Section title="数据导出 & AI 分析" delay={0.3}>
-              <ExportPanel chart={result.chart} engine={engine} solar={solar} refs={canonRefs} />
+              <ExportPanel chart={result.chart} engine={engine} solar={solar} extra={exportExtra} />
             </Section>
           </>
         )}

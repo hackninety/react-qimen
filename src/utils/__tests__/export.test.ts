@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { getQimenEngine } from '@/engines/registry';
 import { chartToJson, chartToMarkdown } from '../export';
+import { buildRelations } from '../relations';
+import { locateYongShen } from '../yongshen';
 import { defaultSolarTimeSetting, resolveSolarTime } from '../true-solar-time';
 
 const date = new Date(2024, 5, 15, 14, 30);
@@ -48,7 +50,7 @@ describe('典籍参考随导出输出', () => {
 
   it('MD 含典籍参考段与格局断语全文', () => {
     const solar = resolveSolarTime(date, defaultSolarTimeSetting());
-    const md = chartToMarkdown(chart, engine, solar, refs);
+    const md = chartToMarkdown(chart, engine, solar, { refs });
     expect(md).toContain('## 典籍参考（《奇門遁甲秘笈大全》2 条）');
     expect(md).toContain('### 十干克应');
     expect(md).toContain('**戊+丙**「青龙返首」（4宫）：动作大吉');
@@ -59,10 +61,44 @@ describe('典籍参考随导出输出', () => {
 
   it('JSON 含典籍参考条目', () => {
     const solar = resolveSolarTime(date, defaultSolarTimeSetting());
-    const parsed = JSON.parse(chartToJson(chart, engine, solar, refs));
+    const parsed = JSON.parse(chartToJson(chart, engine, solar, { refs }));
     expect(parsed['典籍参考']['条目']).toHaveLength(2);
     expect(parsed['典籍参考']['条目'][0]['格名']).toBe('青龙返首');
     expect(parsed['典籍参考']['条目'][0]['出处']).toBe('qmmj/book/juan02.md');
+  });
+});
+
+describe('P0 全链导出：用神/生克/占法要旨', () => {
+  const solar = resolveSolarTime(date, defaultSolarTimeSetting());
+  const extra = {
+    relations: buildRelations(chart),
+    inquiry: { topicId: '求财', subject: '能否谈成合作', yongshen: locateYongShen(chart, '求财') },
+    zhanfa: {
+      topicId: '求财',
+      lunDuan: [{ topic: '求财', aspect: '值符', title: '论值符', text: '值符旺相有气，财必得。', docPath: 'qmmj/book/juan12.md' }],
+      zhanMu: [{ title: '占求财', text: '以生门为财…', docPath: 'qmmj/book/juan08.md' }],
+    },
+  };
+
+  it('MD 六大素材段齐全且内容正确', () => {
+    const md = chartToMarkdown(chart, engine, solar, extra);
+    expect(md).toContain('- 所占何事：求财 · 生意交易｜事由：能否谈成合作');
+    expect(md).toContain('## 用神定位');
+    expect(md).toContain('| 财门（生门） | 生门 | 8宫·东北 |'); // 基准盘生门落艮8
+    expect(md).toContain('## 生克关系（机器预计算）');
+    expect(md).toContain('时干入墓'); // 基准盘时柱癸未
+    expect(md).toContain('庚金生壬水'); // 坎1 天地盘干生克
+    expect(md).toContain('## 占法要旨');
+    expect(md).toContain('**论值符**：值符旺相有气');
+    expect(md).toContain('**占求财**：以生门为财');
+  });
+
+  it('JSON 对应块齐全', () => {
+    const parsed = JSON.parse(chartToJson(chart, engine, solar, extra));
+    expect(parsed['所占何事']['占类']).toBe('求财 · 生意交易');
+    expect(parsed['用神定位'].length).toBeGreaterThanOrEqual(4);
+    expect(parsed['生克关系']['九宫']).toHaveLength(9);
+    expect(parsed['占法要旨']['分类论断'][0]['方面']).toBe('值符');
   });
 });
 

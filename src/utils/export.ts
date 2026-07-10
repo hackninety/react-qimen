@@ -1,15 +1,32 @@
 /**
- * 盘面导出：Markdown（紧凑，省 token）与 JSON（完整，含格局断语）。
+ * 盘面导出：Markdown 与 JSON（完整盘面，供 AI 全面推理）。
  *
- * 两种格式都附带排盘口径与地理/时间上下文（真太阳时、经度、地名、时区），
- * 供 AI 推理时掌握"何时何地按何种流派规则排出"，避免多流派数据混用。
+ * 除排盘口径与地理/时间上下文外，还携带断盘方法论素材：
+ * 所占何事 + 用神定位状态 + 机器预计算生克 + 该占类古法原文 + 典籍参考。
  */
 import type { QimenEngine, UnifiedQimenChart } from '@/engines/types';
 import { GONG_TRIGRAMS, GONG_DIRECTIONS } from '@/engines/types';
 import type { CanonRef } from '@/hooks/useCanonRefs';
+import type { ZhanFa } from '@/hooks/useZhanFa';
+import { getTopic } from '@/lib/yongshen-rules';
 import { juBasisDetail, juBasisText } from './chart-basis';
+import type { ChartRelations } from './relations';
+import { relationsSummary } from './relations';
 import type { SolarTimeResult } from './true-solar-time';
 import { formatOffset } from './true-solar-time';
+import type { YongShenReport } from './yongshen';
+
+/** 导出附加素材（均可选，缺省仍导出纯盘面） */
+export interface ExportExtra {
+  /** 典籍参考（盘面克应检索命中） */
+  refs?: CanonRef[] | null;
+  /** 机器预计算生克关系 */
+  relations?: ChartRelations | null;
+  /** 所占何事（占类 id + 事由）与用神定位 */
+  inquiry?: { topicId: string; subject?: string; yongshen: YongShenReport } | null;
+  /** 该占类古法原文（分类论断 + 相关占目） */
+  zhanfa?: ZhanFa | null;
+}
 
 const fmt = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -34,8 +51,9 @@ function solarContext(solar: SolarTimeResult) {
   };
 }
 
-/** 完整 JSON 导出（不含引擎原始 raw 数据；refs 为按盘面检索到的典籍断语） */
-export function chartToJson(chart: UnifiedQimenChart, engine: QimenEngine, solar: SolarTimeResult, refs?: CanonRef[] | null): string {
+/** 完整 JSON 导出（不含引擎原始 raw 数据） */
+export function chartToJson(chart: UnifiedQimenChart, engine: QimenEngine, solar: SolarTimeResult, extra?: ExportExtra): string {
+  const { refs, relations, inquiry, zhanfa } = extra ?? {};
   const m = chart.meta;
   const payload = {
     应用: 'react-qimen 奇门遁甲排盘',
@@ -80,12 +98,49 @@ export function chartToJson(chart: UnifiedQimenChart, engine: QimenEngine, solar
       标记: p.marks.length ? p.marks : undefined,
       ...(p.extras ?? {}),
     })),
+    所占何事: inquiry
+      ? {
+          占类: getTopic(inquiry.topicId).label,
+          事由: inquiry.subject || undefined,
+          口径: inquiry.yongshen.note,
+        }
+      : undefined,
+    用神定位: inquiry
+      ? inquiry.yongshen.entries.map((e) => ({
+          用神: e.role,
+          符号: e.symbol,
+          落宫: e.missing ? '盘面未见' : `${e.gong}宫·${e.direction}`,
+          同宫组合: e.cohabit,
+          旺衰: e.wangShuai,
+          宫与用神: e.gongRelation,
+          与日干宫: e.vsDayGong,
+          标记: e.marks,
+        }))
+      : undefined,
+    生克关系: relations
+      ? {
+          全局: relationsSummary(relations),
+          九宫: relations.palaces.map((p) => ({
+            宫: `${GONG_TRIGRAMS[p.gong]}${p.gong}宫`,
+            天地盘干: p.ganGan,
+            门与宫: p.menGong?.text,
+            星与宫: p.xingGong,
+          })),
+        }
+      : undefined,
     格局: chart.patterns?.map((pt) => ({
       名称: pt.name,
       落宫: pt.gong,
       吉凶: pt.kind,
       断语: pt.note,
     })),
+    占法要旨: zhanfa && (zhanfa.lunDuan.length || zhanfa.zhanMu.length)
+      ? {
+          说明: `《奇門遁甲秘笈大全》${zhanfa.topicId}占古法（分类论断卷十一~十四；相关占目卷七~十）`,
+          分类论断: zhanfa.lunDuan.map((e) => ({ 方面: e.aspect, 题: e.title, 原文: e.text, 出处: e.docPath })),
+          相关占目: zhanfa.zhanMu.map((e) => ({ 题: e.title, 原文: e.text, 出处: e.docPath })),
+        }
+      : undefined,
     典籍参考: refs?.length
       ? {
           说明: '《奇門遁甲秘笈大全》中与本盘干/门/星/神/时/格局直接对应的原文断语（qmdj-ts-lib 深度结构化检索）',
@@ -103,8 +158,9 @@ export function chartToJson(chart: UnifiedQimenChart, engine: QimenEngine, solar
   return JSON.stringify(payload, null, 2);
 }
 
-/** Markdown 导出（完整盘面：格局含断语全文、典籍参考含原文，供 AI 全面推理） */
-export function chartToMarkdown(chart: UnifiedQimenChart, engine: QimenEngine, solar: SolarTimeResult, refs?: CanonRef[] | null): string {
+/** Markdown 导出（完整盘面：用神/生克/古法/典籍随附，供 AI 分步推理） */
+export function chartToMarkdown(chart: UnifiedQimenChart, engine: QimenEngine, solar: SolarTimeResult, extra?: ExportExtra): string {
+  const { refs, relations, inquiry, zhanfa } = extra ?? {};
   const m = chart.meta;
   const lines: string[] = [];
 
@@ -126,7 +182,27 @@ export function chartToMarkdown(chart: UnifiedQimenChart, engine: QimenEngine, s
   if (chart.layer !== '时家') {
     lines.push(`- 节气背景：${m.jieQi}（历法参考，本盘定局依据见上，非据此节气）`);
   }
+  if (inquiry) {
+    lines.push(`- 所占何事：${getTopic(inquiry.topicId).label}${inquiry.subject ? `｜事由：${inquiry.subject}` : ''}`);
+  }
   lines.push('');
+
+  // 用神定位（断盘第一步：按占类自动取用并评估状态）
+  if (inquiry) {
+    lines.push(`## 用神定位（${inquiry.yongshen.topicLabel}${inquiry.yongshen.note ? `；${inquiry.yongshen.note}` : ''}）`);
+    lines.push('');
+    lines.push('| 用神 | 符号 | 落宫 | 同宫组合 | 状态（旺衰/宫生克/与日干宫/标记） |');
+    lines.push('|---|---|---|---|---|');
+    for (const e of inquiry.yongshen.entries) {
+      const state = [e.wangShuai && `旺衰:${e.wangShuai}`, e.gongRelation, e.vsDayGong, e.marks?.join('·')]
+        .filter(Boolean)
+        .join('；');
+      lines.push(
+        `| ${e.role} | ${e.symbol} | ${e.missing ? '盘面未见' : `${e.gong}宫·${e.direction}`} | ${e.cohabit ?? ''} | ${state || '—'} |`,
+      );
+    }
+    lines.push('');
+  }
 
   lines.push('| 宫位 | 八神 | 九星 | 八门 | 天盘 | 地盘 | 暗干 | 标记/备注 |');
   lines.push('|---|---|---|---|---|---|---|---|');
@@ -142,6 +218,22 @@ export function chartToMarkdown(chart: UnifiedQimenChart, engine: QimenEngine, s
     );
   }
 
+  // 生克关系（机器预计算，AI 勿再自行推五行链）
+  if (relations) {
+    lines.push('');
+    lines.push('## 生克关系（机器预计算）');
+    lines.push('');
+    lines.push(`- 全局：${relationsSummary(relations)}`);
+    lines.push('');
+    lines.push('| 宫 | 天地盘干生克 | 门与宫 | 星与宫 |');
+    lines.push('|---|---|---|---|');
+    for (const p of relations.palaces) {
+      lines.push(
+        `| ${GONG_TRIGRAMS[p.gong]}${p.gong} | ${p.ganGan.join('；') || '—'} | ${p.menGong?.text ?? '—'} | ${p.xingGong ?? '—'} |`,
+      );
+    }
+  }
+
   if (chart.patterns?.length) {
     lines.push('');
     lines.push(`## 格局（${chart.patterns.length}）`);
@@ -151,6 +243,28 @@ export function chartToMarkdown(chart: UnifiedQimenChart, engine: QimenEngine, s
         for (const noteLine of pt.note.split('\n').filter(Boolean)) {
           lines.push(`  ${noteLine}`);
         }
+      }
+    }
+  }
+
+  // 占法要旨：该占类的古法原文（分类论断全套 + 相关占目）
+  if (zhanfa && (zhanfa.lunDuan.length || zhanfa.zhanMu.length)) {
+    lines.push('');
+    lines.push(`## 占法要旨（《奇門遁甲秘笈大全》${zhanfa.topicId}占古法）`);
+    lines.push('');
+    lines.push('> 断此类事的传统方法，AI 应以此为纲结合本盘用神状态推理。');
+    if (zhanfa.lunDuan.length) {
+      lines.push('');
+      lines.push(`### 分类论断（卷十一~十四 · ${zhanfa.topicId}占）`);
+      for (const e of zhanfa.lunDuan) {
+        lines.push(`- **${e.title}**：${e.text.split('\n').filter(Boolean).join(' ')}`);
+      }
+    }
+    if (zhanfa.zhanMu.length) {
+      lines.push('');
+      lines.push('### 相关占目（卷七~十）');
+      for (const e of zhanfa.zhanMu) {
+        lines.push(`- **${e.title}**：${e.text.split('\n').filter(Boolean).join(' ')}`);
       }
     }
   }
