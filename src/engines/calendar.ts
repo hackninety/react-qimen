@@ -42,6 +42,17 @@ export function yiMaOf(zhi: string): string {
   return YI_MA[zhi] ?? '';
 }
 
+/** 阳遁节气（冬至→芒种半年）；夏至→大雪为阴遁 */
+const YANG_DUN_JIEQI = new Set([
+  '冬至', '小寒', '大寒', '立春', '雨水', '惊蛰',
+  '春分', '清明', '谷雨', '立夏', '小满', '芒种',
+]);
+
+/** 时家阴阳遁按节气判定（冬至后用阳遁、夏至后用阴遁），不依赖任何引擎内部表示 */
+export function dunByJieQi(jieQi: string): '阳遁' | '阴遁' {
+  return YANG_DUN_JIEQI.has(jieQi) ? '阳遁' : '阴遁';
+}
+
 /** 干支 → 六十甲子序号（0-59） */
 export function jiaZiIndex(ganZhi: string): number {
   const g = TIAN_GAN.indexOf(ganZhi[0] as (typeof TIAN_GAN)[number]);

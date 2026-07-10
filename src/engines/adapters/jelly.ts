@@ -4,7 +4,7 @@
  * 历法适配层架构（寿星天文历移植），交节边界精度高，另有 lite/tyme4ts 变体
  */
 import { calculate } from 'qimendunjia-standalone';
-import { markKongMa } from '../calendar';
+import { getCalendarContext, markKongMa } from '../calendar';
 import type {
   ChartLayer,
   ComputeInput,
@@ -56,6 +56,11 @@ function compute({ date, layer }: ComputeInput): UnifiedQimenChart {
   const maXing = maMap[hourZhi] ?? '';
   markKongMa(palaces, kongWang, maXing);
 
+  // 非时家层的 juShu.jieQiName 是「定局锚点」（年家恒立春、月家为该月之节、日家为冬/夏至），
+  // 并非排盘当日所处节气；统一口径：meta.jieQi 恒为当日节气，锚点归 juAnchorJieQi
+  const isShiJia = L === '时家';
+  const dayJieQi = isShiJia ? raw.juShu.jieQiName : getCalendarContext(date).jieQi;
+
   const xs = r.info.xunshou ?? '';
   return {
     engineId: 'jelly',
@@ -69,7 +74,8 @@ function compute({ date, layer }: ComputeInput): UnifiedQimenChart {
         day: r.info.siZhu.day,
         hour: r.info.siZhu.time,
       },
-      jieQi: raw.juShu.jieQiName,
+      jieQi: dayJieQi,
+      juAnchorJieQi: isShiJia ? undefined : raw.juShu.jieQiName,
       yuan: raw.juShu.yuan,
       dun: raw.juShu.type === 'yang' ? '阳遁' : '阴遁',
       ju: raw.juShu.number,
@@ -99,6 +105,7 @@ export const jellyEngine: QimenEngine = {
   license: 'MIT',
   homepage: 'https://github.com/MrJelly/QiMenDunJia',
   notes: '历法适配层架构（寿星天文历），交节边界精度高，支持年月日时四层盘与晚子时模式',
+  lateZi: '晚子时不换日：日柱属当日，时柱按次日子时干支（库支持换日模式，未暴露）',
   capabilities: ['暗干', '马星', '空亡'],
   compute,
 };

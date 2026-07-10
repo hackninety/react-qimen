@@ -4,7 +4,7 @@
  * VSOP87D 天文算法节气（精确到分钟），均分法为其原创定局法
  */
 import { TheArtOfBecomingInvisible } from 'taobi';
-import { GATE_ORIGINAL, getCalendarContext, markKongMa } from '../calendar';
+import { dunByJieQi, GATE_ORIGINAL, getCalendarContext, markKongMa } from '../calendar';
 import { LUOSHU_GRID } from '../types';
 import type {
   ComputeInput,
@@ -62,7 +62,8 @@ function compute({ date, method }: ComputeInput): UnifiedQimenChart {
 
   markKongMa(palaces, ctx.hourKong, ctx.yiMa);
 
-  // round：正数阳遁 / 负数阴遁
+  // 局数取自 taobi round 的绝对值；阴阳遁按节气表独立判定，
+  // 不再依赖 round 正负号这一上游内部表示（其变更不影响本适配器）
   const round = Number(t.round) || 0;
   return {
     engineId: 'taobi',
@@ -72,7 +73,7 @@ function compute({ date, method }: ComputeInput): UnifiedQimenChart {
     meta: {
       siZhu: ctx.siZhu,
       jieQi: ctx.jieQi,
-      dun: round >= 0 ? '阳遁' : '阴遁',
+      dun: dunByJieQi(ctx.jieQi),
       ju: Math.abs(round),
       xunShou: ctx.xunShou,
       fuShou: ctx.fuShou,
@@ -100,6 +101,7 @@ export const taobiEngine: QimenEngine = {
   license: 'MPL-2.0',
   homepage: 'https://github.com/Taogram/taobi',
   notes: 'VSOP87D 天文级节气（精确到分钟），独有原创「均分法」定局',
+  lateZi: '晚子时不换日：日柱属当日，时柱按次日子时干支（历法上下文 lunar-typescript）',
   capabilities: ['马星', '空亡'],
   compute,
 };

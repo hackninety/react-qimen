@@ -35,7 +35,7 @@ function YongShenBlock({ report }: { report: YongShenReport }) {
                 </td>
                 <td className="py-1 pr-2 text-muted-foreground">{e.cohabit ?? '—'}</td>
                 <td className="py-1 text-muted-foreground">
-                  {[e.wangShuai && `旺衰:${e.wangShuai}`, e.gongRelation, e.vsDayGong, e.marks?.join('·')]
+                  {[e.wangShuai && `旺衰:${e.wangShuai}`, e.gongRelation, e.vsDayGong, e.marks?.join('·'), e.note]
                     .filter(Boolean)
                     .join('；') || '—'}
                 </td>

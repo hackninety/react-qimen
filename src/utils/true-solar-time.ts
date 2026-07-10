@@ -3,12 +3,16 @@
  *
  * 真太阳时 = 输入墙上钟时间 − 解释时区偏移 + 经度×4分钟 + 均时差
  *
- * - 输入时间按浏览器时区解释（在中国即北京时间 UTC+8，经度基准 120°E）；
+ * 输入时间的「解释时区」按模式而定（排盘惯例：事件时刻即当地钟表时间，
+ * 与操作者所在的浏览器时区无关）：
+ * - 城市模式（中国省市区）：恒按中国标准时间 UTC+8 解释（偏移 480 分钟）。
+ *   浏览器在东京（UTC+9）等非 UTC+8 时区选中国城市时，输入仍是北京时间；
+ * - 自动/手动模式：按浏览器时区解释（操作者输入的是自己本地钟表时间）；
  * - 经度修正：每偏离时区基准经线 1° 折合 4 分钟；
  * - 均时差（Equation of Time）：地球椭圆轨道 + 黄赤交角导致的真/平太阳日差，
  *   采用 Spencer (1971) 近似公式，精度约 ±30 秒，全年幅度约 −14 ~ +16 分钟。
  *
- * 参考 react-taiyi/src/taiyi/solartime.ts（时区解释与城市定位）
+ * 参考 react-taiyi/src/taiyi/solartime.ts（城市模式恒 UTC+8 的时区解释）
  * 与 react-liuren/src/utils/true-solar-time.ts（均时差项）。
  */
 import { PROVINCES } from '@/lib/cities';
@@ -31,7 +35,7 @@ export interface SolarTimeResult {
   place?: string;
   /** 东经为正 */
   longitude?: number;
-  /** 输入时间的解释时区（浏览器 IANA 时区） */
+  /** 输入时间的解释时区（城市模式恒为中国标准时间；自动/手动为浏览器 IANA 时区） */
   timezone?: string;
   /** 解释时区偏移（分钟，东为正） */
   tzOffsetMinutes?: number;
@@ -50,6 +54,9 @@ export interface SolarTimeResult {
 export function defaultSolarTimeSetting(): SolarTimeSetting {
   return { enabled: false, mode: 'city', province: '北京', city: '北京', district: '市区', manualLongitude: 120 };
 }
+
+/** 中国标准时间偏移（分钟）：城市模式下输入时间恒按 UTC+8 解释，与浏览器时区无关 */
+export const CN_TZ_OFFSET_MINUTES = 480;
 
 /** 常见 IANA 时区 → 代表城市与经度（自动模式用），未收录时回退时区标准经线 */
 const TZ_CITY: Record<string, { label: string; longitude: number }> = {
@@ -127,7 +134,10 @@ export function resolveSolarTime(standardDate: Date, setting: SolarTimeSetting):
   if (!setting.enabled) return { applied: false, standardDate, date: standardDate };
 
   const { place, longitude } = resolveLocation(setting, standardDate);
-  const tzOffsetMinutes = -standardDate.getTimezoneOffset();
+  // 城市模式：输入是中国城市的当地钟表时间，恒按 UTC+8 解释（学 react-taiyi），
+  // 否则浏览器在东京等时区会把北京时间误当本地时间，多扣/少扣整时区差
+  const isCity = setting.mode === 'city';
+  const tzOffsetMinutes = isCity ? CN_TZ_OFFSET_MINUTES : -standardDate.getTimezoneOffset();
   const longitudeCorrectionMinutes = longitude * 4 - tzOffsetMinutes;
   const eotMinutes = equationOfTime(standardDate);
   const offsetMinutes = Math.round((longitudeCorrectionMinutes + eotMinutes) * 10) / 10;
@@ -136,7 +146,7 @@ export function resolveSolarTime(standardDate: Date, setting: SolarTimeSetting):
     applied: true,
     place,
     longitude,
-    timezone: browserTimeZone(),
+    timezone: isCity ? '中国标准时间 UTC+8' : browserTimeZone(),
     tzOffsetMinutes,
     longitudeCorrectionMinutes: Math.round(longitudeCorrectionMinutes * 10) / 10,
     eotMinutes: Math.round(eotMinutes * 10) / 10,

@@ -55,4 +55,26 @@ describe('用神定位（基准盘）', () => {
       for (const e of r.entries) expect(e.missing, `${t.id}·${e.role}`).not.toBe(true);
     }
   });
+
+  it('年命：1990 庚午年生 → 干庚落坎1（与日干同宫），年支午辖离9', () => {
+    const r = locateYongShen(chart, '综合', { birthYear: 1990 });
+    const nm = r.entries.find((e) => e.role.includes('年命'));
+    expect(nm?.symbol).toContain('庚午');
+    expect(nm?.gong).toBe(1);
+    expect(nm?.vsDayGong).toContain('同宫');
+    expect(nm?.note).toBe('年支午辖9宫');
+  });
+
+  it('年命甲年（1984 甲子）按遁仪替换：遁戊落兑7', () => {
+    const r = locateYongShen(chart, '综合', { birthYear: 1984 });
+    const nm = r.entries.find((e) => e.role.includes('年命'));
+    expect(nm?.symbol).toContain('甲子');
+    expect(nm?.symbol).toContain('遁戊');
+    expect(nm?.gong).toBe(7);
+  });
+
+  it('不传生年时无年命行', () => {
+    const r = locateYongShen(chart, '综合');
+    expect(r.entries.some((e) => e.role.includes('年命'))).toBe(false);
+  });
 });

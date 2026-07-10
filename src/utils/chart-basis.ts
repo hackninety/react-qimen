@@ -23,13 +23,15 @@ export function juBasisText(chart: UnifiedQimenChart): string {
 
 /** 「定局依据」更完整的说明（含定局法/换局锚点），用于 AI 导出，避免误读 */
 export function juBasisDetail(chart: UnifiedQimenChart): string {
+  // 部分引擎（jelly）给出年/月/日家定局锚点节气（年家恒立春、月家为该月之节）
+  const anchor = chart.meta.juAnchorJieQi ? `，定局锚点节气 ${chart.meta.juAnchorJieQi}` : '';
   switch (chart.layer) {
     case '年家':
-      return `太岁 ${chart.meta.siZhu.year} 年定局（自立春换岁，与排盘当天节气无关）`;
+      return `太岁 ${chart.meta.siZhu.year} 年定局（自立春换岁，与排盘当天节气无关${anchor}）`;
     case '月家':
-      return `节气月 ${chart.meta.siZhu.month?.[1] ?? ''}月 定局`;
+      return `节气月 ${chart.meta.siZhu.month?.[1] ?? ''}月 定局${anchor ? `（${anchor.slice(1)}）` : ''}`;
     case '日家':
-      return `日干支 ${chart.meta.siZhu.day} 定局`;
+      return `日干支 ${chart.meta.siZhu.day} 定局${anchor ? `（${anchor.slice(1)}）` : ''}`;
     default:
       return `节气 ${chart.meta.jieQi} · ${chart.method}法三元定局`;
   }

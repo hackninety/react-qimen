@@ -10,6 +10,7 @@ import type { CanonRef } from '@/hooks/useCanonRefs';
 import type { ZhanFa } from '@/hooks/useZhanFa';
 import { getTopic } from '@/lib/yongshen-rules';
 import { juBasisDetail, juBasisText } from './chart-basis';
+import type { CrossCheckResult } from './cross-check';
 import type { ChartRelations } from './relations';
 import { relationsSummary } from './relations';
 import type { SolarTimeResult } from './true-solar-time';
@@ -22,10 +23,12 @@ export interface ExportExtra {
   refs?: CanonRef[] | null;
   /** 机器预计算生克关系 */
   relations?: ChartRelations | null;
-  /** 所占何事（占类 id + 事由）与用神定位 */
-  inquiry?: { topicId: string; subject?: string; yongshen: YongShenReport } | null;
+  /** 所占何事（占类 id + 事由 + 求测人生年）与用神定位 */
+  inquiry?: { topicId: string; subject?: string; birthYear?: number; yongshen: YongShenReport } | null;
   /** 该占类古法原文（分类论断 + 相关占目） */
   zhanfa?: ZhanFa | null;
+  /** 参照引擎交叉校验（时家同定局法双引擎对比） */
+  crossCheck?: CrossCheckResult | null;
 }
 
 const fmt = (d: Date) =>
@@ -53,7 +56,7 @@ function solarContext(solar: SolarTimeResult) {
 
 /** 完整 JSON 导出（不含引擎原始 raw 数据） */
 export function chartToJson(chart: UnifiedQimenChart, engine: QimenEngine, solar: SolarTimeResult, extra?: ExportExtra): string {
-  const { refs, relations, inquiry, zhanfa } = extra ?? {};
+  const { refs, relations, inquiry, zhanfa, crossCheck } = extra ?? {};
   const m = chart.meta;
   const payload = {
     应用: 'react-qimen 奇门遁甲排盘',
@@ -63,6 +66,15 @@ export function chartToJson(chart: UnifiedQimenChart, engine: QimenEngine, solar
       定局法: chart.layer === '时家' ? `${chart.method}法` : undefined,
       引擎: { 名称: engine.name, npm包: engine.pkg, 许可证: engine.license, 仓库: engine.homepage },
       能力: engine.capabilities,
+      晚子时口径: engine.lateZi,
+      双引擎校验: crossCheck
+        ? {
+            参照引擎: crossCheck.referenceName,
+            范围: crossCheck.scope,
+            结论: crossCheck.consistent ? '一致 ✓' : `存在 ${crossCheck.diffs.length} 处差异（口径或上游实现差异，采信本盘为准）`,
+            差异: crossCheck.diffs.length ? crossCheck.diffs : undefined,
+          }
+        : undefined,
       提示: '不同流派/定局法结果不可直接混用比对；本盘所有字段均按上述口径产生',
     },
     时间: {
@@ -102,6 +114,7 @@ export function chartToJson(chart: UnifiedQimenChart, engine: QimenEngine, solar
       ? {
           占类: getTopic(inquiry.topicId).label,
           事由: inquiry.subject || undefined,
+          求测人生年: inquiry.birthYear,
           口径: inquiry.yongshen.note,
         }
       : undefined,
@@ -115,6 +128,7 @@ export function chartToJson(chart: UnifiedQimenChart, engine: QimenEngine, solar
           宫与用神: e.gongRelation,
           与日干宫: e.vsDayGong,
           标记: e.marks,
+          备注: e.note,
         }))
       : undefined,
     生克关系: relations
@@ -151,6 +165,7 @@ export function chartToJson(chart: UnifiedQimenChart, engine: QimenEngine, solar
             格名: r.name,
             原文: r.text,
             出处: r.docPath,
+            存疑: r.uncertain ? '底本带「俟查」类残注，引用宜慎' : undefined,
           })),
         }
       : undefined,
@@ -160,7 +175,7 @@ export function chartToJson(chart: UnifiedQimenChart, engine: QimenEngine, solar
 
 /** Markdown 导出（完整盘面：用神/生克/古法/典籍随附，供 AI 分步推理） */
 export function chartToMarkdown(chart: UnifiedQimenChart, engine: QimenEngine, solar: SolarTimeResult, extra?: ExportExtra): string {
-  const { refs, relations, inquiry, zhanfa } = extra ?? {};
+  const { refs, relations, inquiry, zhanfa, crossCheck } = extra ?? {};
   const m = chart.meta;
   const lines: string[] = [];
 
@@ -182,8 +197,15 @@ export function chartToMarkdown(chart: UnifiedQimenChart, engine: QimenEngine, s
   if (chart.layer !== '时家') {
     lines.push(`- 节气背景：${m.jieQi}（历法参考，本盘定局依据见上，非据此节气）`);
   }
+  if (crossCheck) {
+    if (crossCheck.consistent) {
+      lines.push(`- 双引擎校验：与 ${crossCheck.referenceName} 同参对比一致 ✓（${crossCheck.scope}）`);
+    } else {
+      lines.push(`- 双引擎校验：与 ${crossCheck.referenceName} 存在 ${crossCheck.diffs.length} 处差异（口径或上游实现差异，AI 采信本盘为准）：${crossCheck.diffs.slice(0, 6).join('；')}${crossCheck.diffs.length > 6 ? ' 等' : ''}`);
+    }
+  }
   if (inquiry) {
-    lines.push(`- 所占何事：${getTopic(inquiry.topicId).label}${inquiry.subject ? `｜事由：${inquiry.subject}` : ''}`);
+    lines.push(`- 所占何事：${getTopic(inquiry.topicId).label}${inquiry.subject ? `｜事由：${inquiry.subject}` : ''}${inquiry.birthYear ? `｜求测人生年：${inquiry.birthYear}（年命见用神表）` : ''}`);
   }
   lines.push('');
 
@@ -194,7 +216,7 @@ export function chartToMarkdown(chart: UnifiedQimenChart, engine: QimenEngine, s
     lines.push('| 用神 | 符号 | 落宫 | 同宫组合 | 状态（旺衰/宫生克/与日干宫/标记） |');
     lines.push('|---|---|---|---|---|');
     for (const e of inquiry.yongshen.entries) {
-      const state = [e.wangShuai && `旺衰:${e.wangShuai}`, e.gongRelation, e.vsDayGong, e.marks?.join('·')]
+      const state = [e.wangShuai && `旺衰:${e.wangShuai}`, e.gongRelation, e.vsDayGong, e.marks?.join('·'), e.note]
         .filter(Boolean)
         .join('；');
       lines.push(
@@ -283,11 +305,11 @@ export function chartToMarkdown(chart: UnifiedQimenChart, engine: QimenEngine, s
       }
       const head = `- **${r.key}**${r.name && r.name !== r.key ? `「${r.name}」` : ''}${r.gong ? `（${r.gong}宫）` : ''}`;
       const body = r.text.split('\n').filter(Boolean).join(' ');
-      lines.push(`${head}：${body}`);
+      lines.push(`${head}：${body}${r.uncertain ? '（⚠ 原文存疑：底本带「俟查」类残注，引用宜慎）' : ''}`);
     }
   }
 
   lines.push('');
-  lines.push(`> 引擎：${engine.name}（npm: ${engine.pkg}，${engine.license}）· 流派口径见标题，不同流派结果勿混用 · 典籍出处 ctext.org res=953105`);
+  lines.push(`> 引擎：${engine.name}（npm: ${engine.pkg}，${engine.license}）· 晚子时口径：${engine.lateZi} · 流派口径见标题，不同流派结果勿混用 · 典籍出处 ctext.org res=953105`);
   return lines.join('\n');
 }

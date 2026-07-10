@@ -52,4 +52,20 @@ describe('真太阳时解析', () => {
     expect(r.place).toContain('海淀区');
     expect(r.longitude).toBeCloseTo(116.31, 1);
   });
+
+  it('城市模式恒按 UTC+8 解释输入，与运行环境时区无关（东京浏览器选中国城市不再多扣 60 分钟）', () => {
+    const r = resolveSolarTime(date, {
+      enabled: true, mode: 'city', province: '广东', city: '潮州', district: '市区', manualLongitude: 120,
+    });
+    expect(r.tzOffsetMinutes).toBe(480);
+    expect(r.timezone).toBe('中国标准时间 UTC+8');
+    // 潮州 ≈116.62°E：经度修正 = 116.62×4 − 480 ≈ −13.5 分钟（固定值，不随机器时区漂移）
+    expect(r.longitudeCorrectionMinutes).toBeCloseTo(116.62 * 4 - 480, 0);
+  });
+
+  it('自动/手动模式仍按浏览器时区解释输入（操作者本地钟表时间）', () => {
+    const r = resolveSolarTime(date, { ...defaultSolarTimeSetting(), enabled: true, mode: 'manual', manualLongitude: 139.69 });
+    expect(r.tzOffsetMinutes).toBe(-date.getTimezoneOffset());
+    expect(r.timezone).not.toBe('中国标准时间 UTC+8');
+  });
 });

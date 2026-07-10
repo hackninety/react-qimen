@@ -18,6 +18,7 @@ import { InquiryBar } from './components/InquiryBar';
 import { useCanonRefs } from './hooks/useCanonRefs';
 import { useZhanFa } from './hooks/useZhanFa';
 import { TOPICS } from './lib/yongshen-rules';
+import { crossCheckChart } from './utils/cross-check';
 import { buildRelations } from './utils/relations';
 import { locateYongShen } from './utils/yongshen';
 import { fromInputValue, toInputValue } from './utils/datetime';
@@ -54,9 +55,10 @@ export default function App() {
   const [engineId, setEngineId] = usePersistentState<QimenEngineId>('engineId', DEFAULT_ENGINE_ID, (v) => listQimenEngines().some((e) => e.id === v));
   const [method, setMethod] = usePersistentState<JuMethod>('method', '拆补', (v) => typeof v === 'string');
   const [solarSetting, setSolarSetting] = usePersistentState<SolarTimeSetting>('solarSetting', defaultSolarTimeSetting, (v) => typeof v === 'object' && v !== null && 'enabled' in v && 'mode' in v);
-  // 所占何事：占类决定用神取用与注入的古法
+  // 所占何事：占类决定用神取用与注入的古法；生年定年命落宫
   const [topicId, setTopicId] = usePersistentState<string>('topicId', '综合', (v) => TOPICS.some((t) => t.id === v));
   const [subject, setSubject] = usePersistentState<string>('subject', '', (v) => typeof v === 'string');
+  const [birthYear, setBirthYear] = usePersistentState<string>('birthYear', '', (v) => typeof v === 'string');
   const [canon, setCanon] = useState<{ open: boolean; path?: string }>({ open: false });
   // 主题：存储优先，无存储时按时段（18:00~06:00 暗色）
   const [isDark, setIsDark] = usePersistentState(
@@ -122,17 +124,31 @@ export default function App() {
   const canonRefs = useCanonRefs(result.ok ? result.chart : undefined);
   // 占类 → 古法原文（qmdj-ts-lib/zhanmu 动态加载）
   const zhanfa = useZhanFa(topicId);
+  // 求测人生年（4 位才生效，1700~2100 合理区间）
+  const birthYearNum = useMemo(() => {
+    const n = Number(birthYear);
+    return /^\d{4}$/.test(birthYear) && n >= 1700 && n <= 2100 ? n : undefined;
+  }, [birthYear]);
   // 用神定位与生克预计算（同步纯函数）
-  const yongshen = useMemo(() => (result.ok ? locateYongShen(result.chart, topicId) : null), [result, topicId]);
+  const yongshen = useMemo(
+    () => (result.ok ? locateYongShen(result.chart, topicId, { birthYear: birthYearNum }) : null),
+    [result, topicId, birthYearNum],
+  );
   const relations = useMemo(() => (result.ok ? buildRelations(result.chart) : null), [result]);
+  // 参照引擎交叉校验（时家同定局法静默复排对比）
+  const crossCheck = useMemo(
+    () => (result.ok ? crossCheckChart(result.chart, { date: solar.date, method: activeMethod, layer: activeLayer }) : null),
+    [result, solar, activeMethod, activeLayer],
+  );
   const exportExtra = useMemo(
     () => ({
       refs: canonRefs,
       relations,
-      inquiry: yongshen ? { topicId, subject: subject.trim() || undefined, yongshen } : null,
+      inquiry: yongshen ? { topicId, subject: subject.trim() || undefined, birthYear: birthYearNum, yongshen } : null,
       zhanfa,
+      crossCheck,
     }),
-    [canonRefs, relations, yongshen, topicId, subject, zhanfa],
+    [canonRefs, relations, yongshen, topicId, subject, birthYearNum, zhanfa, crossCheck],
   );
 
   return (
@@ -188,9 +204,35 @@ export default function App() {
               onMethodChange={setMethod}
             />
             <SolarTimeControl setting={solarSetting} result={solar} onChange={setSolarSetting} />
-            <InquiryBar topicId={topicId} subject={subject} onTopicChange={setTopicId} onSubjectChange={setSubject} />
+            <InquiryBar
+              topicId={topicId}
+              subject={subject}
+              birthYear={birthYear}
+              onTopicChange={setTopicId}
+              onSubjectChange={setSubject}
+              onBirthYearChange={setBirthYear}
+            />
           </div>
         </Section>
+
+        {/* 双引擎校验：不一致时醒目提示，一致时静默增信一行 */}
+        {result.ok && crossCheck && (
+          crossCheck.consistent ? (
+            <p className="px-1 text-[11px] text-muted-foreground/60">
+              双引擎校验：与 {crossCheck.referenceName} 同参对比一致 ✓
+            </p>
+          ) : (
+            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs leading-5">
+              <p className="font-semibold text-amber-600 dark:text-amber-400">
+                双引擎校验：与 {crossCheck.referenceName} 存在 {crossCheck.diffs.length} 处差异（口径或上游实现差异）
+              </p>
+              <p className="mt-1 text-muted-foreground">
+                {crossCheck.diffs.slice(0, 4).join('；')}
+                {crossCheck.diffs.length > 4 ? ' 等' : ''}
+              </p>
+            </div>
+          )
+        )}
 
         {!result.ok ? (
           <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive-foreground">

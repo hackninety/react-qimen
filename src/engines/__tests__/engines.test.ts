@@ -149,10 +149,12 @@ describe('年/月/日家四层盘', () => {
     }
   }
 
-  it('bigfish 年家：2024 甲辰年 → 阴遁七局下元、四柱仅年柱', () => {
+  it('bigfish 年家：2024 甲辰年 → 阴遁七局下元、四柱带精确年月日三柱（时柱不参与留空）', () => {
     const chart = getQimenEngine('bigfish').compute({ date: BASE_DATE, method: '拆补', layer: '年家' });
     expect(chart.meta.siZhu.year).toBe('甲辰');
-    expect(chart.meta.siZhu.month).toBe('');
+    expect(chart.meta.siZhu.month).toBe('庚午');
+    expect(chart.meta.siZhu.day).toBe('庚戌');
+    expect(chart.meta.siZhu.hour).toBe('');
     expect(chart.meta.dun).toBe('阴遁');
     expect(chart.meta.ju).toBe(7);
   });

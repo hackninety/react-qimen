@@ -9,6 +9,7 @@ import { maoShanJu } from 'bigfishmarquis-qimen/src/engines/maoshan';
 import { zhiRunJu } from 'bigfishmarquis-qimen/src/engines/zhirun';
 import { nianJiaGenerate, yueJiaGenerate, riJiaGenerate, type QimenChart } from 'bigfishmarquis-qimen';
 import { getCalendarContext, markKongMa, XUN_TO_FUSHOU, xunShouOf, yiMaOf } from '../calendar';
+import { DI_ZHI, TIAN_GAN } from '../types';
 import type {
   ChartLayer,
   ComputeInput,
@@ -25,7 +26,12 @@ const MARK_MAP: Record<string, PalaceMark> = {
   空: '空亡', 时空: '空亡', 马: '马星', 刑: '击刑', 墓: '入墓', 迫: '门迫',
 };
 
-/** bigfish QimenChart.palaces → 统一宫位（时家/年月日家共用同一结构） */
+/**
+ * bigfish QimenChart.palaces → 统一宫位（时家/年月日家共用同一结构）。
+ * ⚠️ 上游字段名历史遗留互换（其 types.ts 自注）：earthStem 字段存的是天盘干、
+ * skyStem 字段存的是地盘干；jiGanStem 为天禽寄干，属天盘侧。
+ * 曾按字面取值导致天地盘互换（双引擎校验发现），此处按真实语义映射。
+ */
 function mapPalaces(chart: QimenChart): PalaceInfo[] {
   return [...chart.palaces]
     .sort((a, b) => a.palaceNumber - b.palaceNumber)
@@ -35,8 +41,8 @@ function mapPalaces(chart: QimenChart): PalaceInfo[] {
       if (p.diGod) extras['地神'] = p.diGod;
       return {
         gong: p.palaceNumber as GongIndex,
-        diPanGan: [p.earthStem].filter(Boolean),
-        tianPanGan: [p.skyStem, p.jiGanStem].filter((s): s is string => Boolean(s)),
+        diPanGan: [p.skyStem].filter(Boolean),
+        tianPanGan: [p.earthStem, p.jiGanStem].filter((s): s is string => Boolean(s)),
         star: p.star || undefined,
         gate: p.door || undefined,
         god: p.god || undefined,
@@ -98,22 +104,30 @@ function computeShiJia(date: Date, method: JuMethod): UnifiedQimenChart {
   };
 }
 
-const gz = (p?: { gan: string; zhi: string }) => (p?.gan ? p.gan + p.zhi : '');
+/** 公历年号 → 该年大部分时段的干支（1984=甲子），用于探测立春前后 */
+function civilYearGz(year: number): string {
+  const idx = (((year - 1984) % 60) + 60) % 60;
+  return TIAN_GAN[idx % 10] + DI_ZHI[idx % 12];
+}
 
 /** 年/月/日家（按太岁年 / 节气月 / 公历日定局，无定局法之分） */
 function computeLayer(layer: '日家' | '月家' | '年家', date: Date): UnifiedQimenChart {
   const ctx = getCalendarContext(date);
+  // bigfish 年/月家生成器按公历年号取太岁：立春之前（如 2025-01）年号对应的干支
+  // 尚未换岁，直接传会误用次年太岁；以 lunar-typescript 精确年柱校准年号
+  const taiSuiYear = civilYearGz(date.getFullYear()) === ctx.siZhu.year ? date.getFullYear() : date.getFullYear() - 1;
   const chart =
     layer === '年家'
-      ? nianJiaGenerate(date.getFullYear())
+      ? nianJiaGenerate(taiSuiYear)
       : layer === '月家'
-        ? yueJiaGenerate(date.getFullYear(), ctx.solarMonthOrdinal)
+        ? yueJiaGenerate(taiSuiYear, ctx.solarMonthOrdinal)
         : riJiaGenerate(date.getFullYear(), date.getMonth() + 1, date.getDate());
 
-  const fp = chart.fourPillars;
-  const pillar = layer === '年家' ? fp?.year : layer === '月家' ? fp?.month : fp?.day;
-  const pillarGz = gz(pillar);
-  const maXing = pillar ? yiMaOf(pillar.zhi) : '';
+  // 四柱显示与用神/马星均用 lunar-typescript 精确值（bigfish 内部月柱在交节日按日粒度切换，
+  // 曾致 1990-11-08 已交立冬仍显丙戌月）；时柱不参与年/月/日家定局，留空
+  const siZhu = { ...ctx.siZhu, hour: '' };
+  const pillarGz = layer === '年家' ? siZhu.year : layer === '月家' ? siZhu.month : siZhu.day;
+  const maXing = pillarGz ? yiMaOf(pillarGz[1]) : '';
   const xunShou = pillarGz ? xunShouOf(pillarGz) : '';
 
   const palaces = mapPalaces(chart);
@@ -125,7 +139,7 @@ function computeLayer(layer: '日家' | '月家' | '年家', date: Date): Unifie
     method: '拆补', // 年月日家无定局法之分，占位
     layer,
     meta: {
-      siZhu: { year: gz(fp?.year), month: gz(fp?.month), day: gz(fp?.day), hour: '' },
+      siZhu,
       jieQi: ctx.jieQi,
       yuan: `${chart.yuan}元` as '上元' | '中元' | '下元',
       dun: chart.dun === 'yang' ? '阳遁' : '阴遁',
@@ -161,6 +175,7 @@ export const bigfishEngine: QimenEngine = {
   license: 'MIT',
   homepage: 'https://github.com/perfhelf/bigfishmarquis-qimen',
   notes: '唯一支持拆补/茅山/置闰三定局法 + 年月日时四层盘的 JS 引擎，零依赖，含地八神/暗干/墓刑迫标记',
+  lateZi: '晚子时不换日：日柱属当日，时柱按次日子时干支（历法上下文 lunar-typescript）',
   capabilities: ['暗干', '击刑', '门迫', '入墓', '马星', '空亡'],
   compute,
 };

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getQimenEngine } from '@/engines/registry';
+import { crossCheckChart } from '../cross-check';
 import { chartToJson, chartToMarkdown } from '../export';
 import { buildRelations } from '../relations';
 import { locateYongShen } from '../yongshen';
@@ -138,5 +139,40 @@ describe('JSON 导出', () => {
     expect(parsed['局']['值符']).toBe('天柱');
     expect(parsed['真太阳时']['启用']).toBe(false);
     expect(parsed['时间']['四柱']['day']).toBe('庚戌');
+  });
+});
+
+describe('P1 导出增项：晚子时口径 / 双引擎校验 / 求测人生年', () => {
+  const solar = resolveSolarTime(date, defaultSolarTimeSetting());
+
+  it('MD/JSON 均注明晚子时口径', () => {
+    expect(chartToMarkdown(chart, engine, solar)).toContain('晚子时口径：23点起换日');
+    const parsed = JSON.parse(chartToJson(chart, engine, solar));
+    expect(parsed['排盘口径']['晚子时口径']).toContain('23点起换日');
+  });
+
+  it('双引擎校验一致时 MD 带 ✓ 行、JSON 带结论块', () => {
+    const crossCheck = crossCheckChart(chart, { date, method: '拆补' });
+    expect(crossCheck?.consistent).toBe(true);
+    const md = chartToMarkdown(chart, engine, solar, { crossCheck });
+    expect(md).toContain('双引擎校验：与 鲲侯 BigFishMarquis 同参对比一致 ✓');
+    const parsed = JSON.parse(chartToJson(chart, engine, solar, { crossCheck }));
+    expect(parsed['排盘口径']['双引擎校验']['结论']).toBe('一致 ✓');
+  });
+
+  it('生年随所占何事行与用神表输出', () => {
+    const inquiry = {
+      topicId: '身命',
+      subject: '流年运势',
+      birthYear: 1990,
+      yongshen: locateYongShen(chart, '身命', { birthYear: 1990 }),
+    };
+    const md = chartToMarkdown(chart, engine, solar, { inquiry });
+    expect(md).toContain('求测人生年：1990');
+    expect(md).toContain('年命（求测人）');
+    expect(md).toContain('庚午');
+    const parsed = JSON.parse(chartToJson(chart, engine, solar, { inquiry }));
+    expect(parsed['所占何事']['求测人生年']).toBe(1990);
+    expect(parsed['用神定位'].some((e: { 用神: string }) => e['用神'].includes('年命'))).toBe(true);
   });
 });

@@ -141,6 +141,7 @@ export const mingfaEngine: QimenEngine = {
   license: 'MIT',
   homepage: 'https://github.com/Richardge885/qimen-refactor',
   notes: '飞盘奇门鸣法流派：交节定元、天地双神、格局断语、六亲十神、神煞体系',
+  lateZi: '23点起换日：日柱即算次日（子时换日派）',
   capabilities: ['格局', '暗干', '旺衰', '马星', '空亡'],
   compute,
 };

@@ -27,6 +27,14 @@ function RefItem({ r, onOpenDoc }: { r: CanonRef; onOpenDoc(path: string): void 
             {r.name && r.name !== r.key && <em className="ml-1 not-italic text-muted-foreground">「{r.name}」</em>}
           </span>
           {r.gong && <span className="shrink-0 text-[10px] text-muted-foreground">{r.gong}宫</span>}
+          {r.uncertain && (
+            <span
+              className="shrink-0 rounded bg-amber-500/15 px-1 text-[10px] leading-4 text-amber-600 dark:text-amber-400"
+              title="底本带「俟查」类残注，原文存疑，引用宜慎"
+            >
+              存疑
+            </span>
+          )}
           {long && <ChevronDown size={12} className={cn('shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')} />}
         </button>
         <button

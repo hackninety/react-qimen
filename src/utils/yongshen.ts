@@ -4,7 +4,7 @@
  * 断盘第一步"定用神"由此完成，结果进 UI、导出与 AI Prompt。
  */
 import type { GongIndex, UnifiedQimenChart, PalaceInfo } from '@/engines/types';
-import { GONG_DIRECTIONS } from '@/engines/types';
+import { DI_ZHI, GONG_DIRECTIONS, TIAN_GAN } from '@/engines/types';
 import { PALACE_BRANCHES, XUN_TO_FUSHOU, xunShouOf } from '@/engines/calendar';
 import { ganWx, gateWx, GONG_WX, relationOf, starWx, type WuXing } from '@/lib/wuxing-logic';
 import { COMMON_YONGSHEN, getTopic, type TopicDef, type YongShenRule } from '@/lib/yongshen-rules';
@@ -25,6 +25,8 @@ export interface YongShenEntry {
   gongRelation?: string;
   /** 用神宫与日干宫的宫际生克（非日干用神时给出） */
   vsDayGong?: string;
+  /** 补充说明（如年命的年支辖宫） */
+  note?: string;
   /** 盘面未见该要素（引擎能力限制） */
   missing?: boolean;
 }
@@ -117,7 +119,11 @@ function evaluate(
   return entry;
 }
 
-export function locateYongShen(chart: UnifiedQimenChart, topicId: string): YongShenReport {
+export function locateYongShen(
+  chart: UnifiedQimenChart,
+  topicId: string,
+  opts?: { birthYear?: number },
+): YongShenReport {
   const topic: TopicDef = getTopic(topicId);
   const m = chart.meta;
   const entries: YongShenEntry[] = [];
@@ -177,6 +183,24 @@ export function locateYongShen(chart: UnifiedQimenChart, topicId: string): YongS
         break;
       }
     }
+  }
+
+  // 年命（求测人生年干支）：断身命/疾病必看，干落宫为主、年支辖宫为辅注。
+  // 1984=甲子按公历年折算（生于立春前者应自行填上一年）；甲年命干遁六仪与日/时干同法
+  if (opts?.birthYear && Number.isInteger(opts.birthYear)) {
+    const idx = (((opts.birthYear - 1984) % 60) + 60) % 60;
+    const gz = TIAN_GAN[idx % 10] + DI_ZHI[idx % 12];
+    const g = resolveGan(gz[0], gz);
+    const entry = evaluate(
+      { role: '年命（求测人）', kind: 'gan', symbol: g.gan },
+      g.gan,
+      `${gz}（${opts.birthYear}年生${gz[0] === '甲' ? `，干遁${g.gan}` : ''}）`,
+      g.gan ? findByGan(chart, g.gan) : [],
+      dayGong,
+    );
+    const zhiGong = chart.palaces.find((p) => PALACE_BRANCHES[p.gong]?.includes(gz[1]))?.gong;
+    if (zhiGong) entry.note = `年支${gz[1]}辖${zhiGong}宫`;
+    entries.push(entry);
   }
 
   return { topicId: topic.id, topicLabel: topic.label, note: topic.note, entries };

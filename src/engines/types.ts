@@ -65,8 +65,8 @@ export type JuMethod = '拆补' | '茅山' | '置闰' | '均分' | '鸣法';
 
 // ---------- 统一盘面模型 ----------
 
-/** 宫位标记（各引擎能力不同，缺失不代表无此象） */
-export type PalaceMark = '空亡' | '马星' | '击刑' | '门迫' | '入墓';
+/** 宫位标记（各引擎能力不同，缺失不代表无此象）；「空亡」指时空亡，「日空」按日柱旬空 */
+export type PalaceMark = '空亡' | '日空' | '马星' | '击刑' | '门迫' | '入墓';
 
 /** 单个宫位的完整信息 */
 export interface PalaceInfo {
@@ -101,8 +101,10 @@ export interface PatternHit {
 export interface ChartMeta {
   /** 四柱干支 */
   siZhu: { year: string; month: string; day: string; hour: string };
-  /** 节气 */
+  /** 排盘时刻所处节气（各层盘统一为当日实际节气；时家据此定局） */
   jieQi: string;
+  /** 年/月/日家定局锚点节气（部分引擎给出，如 jelly 年家恒立春、月家为该月之节），时家不用 */
+  juAnchorJieQi?: string;
   /** 三元 */
   yuan?: '上元' | '中元' | '下元';
   /** 阴阳遁 */
@@ -192,6 +194,8 @@ export interface QimenEngine {
   homepage: string;
   /** 一句话特点，展示在引擎切换器中 */
   notes: string;
+  /** 晚子时（23:00~24:00）四柱口径（各引擎实测，2024-06-15 23:30 探针），随导出注明 */
+  lateZi: string;
   capabilities: EngineCapability[];
   compute(input: ComputeInput): UnifiedQimenChart;
 }

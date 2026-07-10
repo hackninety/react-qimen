@@ -3,7 +3,7 @@
  * 源自 kentang2017/kinqimen（Python 堅奇門）的 TypeScript 移植（GPL-3.0，tyme4ts 历法）
  */
 import { Qimen } from 'kinqimen';
-import { markKongMa, XUN_TO_FUSHOU } from '../calendar';
+import { markKongMa, PALACE_BRANCHES, XUN_TO_FUSHOU } from '../calendar';
 import type {
   ComputeInput,
   GongIndex,
@@ -99,8 +99,16 @@ function compute({ date }: ComputeInput): UnifiedQimenChart {
     raw: pan,
   };
 
-  // 空亡/马星按地支落宫标记
+  // 时空亡/马星按地支落宫标记
   markKongMa(chart.palaces, kongWang, pan.maXing.yiMa);
+  // 日空（日柱旬空）单独标记，与时空亡区分——库直出而此前未消费
+  const dayKong = (pan.xunKong.dayKong ?? '').split('');
+  for (const p of chart.palaces) {
+    const branches = PALACE_BRANCHES[p.gong];
+    if (branches && dayKong.some((b) => branches.includes(b)) && !p.marks.includes('日空')) {
+      p.marks.push('日空');
+    }
+  }
   return chart;
 }
 
@@ -114,6 +122,7 @@ export const kinqimenEngine: QimenEngine = {
   license: 'GPL-3.0',
   homepage: 'https://github.com/kentang2017/kinqimen',
   notes: 'kentang2017 堅奇門的 TS 移植，tyme4ts 历法，含门迫/击刑/三马/长生运',
+  lateZi: '23点起换日：日柱即算次日（子时换日派）',
   capabilities: ['暗干', '击刑', '门迫', '马星', '空亡'],
   compute,
 };

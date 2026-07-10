@@ -135,6 +135,7 @@ export const sanmetaEngine: QimenEngine = {
   license: 'MIT',
   homepage: 'https://github.com/3metaJun/3meta',
   notes: '社区最活跃的 TS 排盘库，格局/旺衰/击刑/门迫/入墓/暗干最全，i18n 支持',
+  lateZi: '23点起换日：日柱即算次日（子时换日派）',
   capabilities: ['格局', '暗干', '击刑', '门迫', '入墓', '旺衰', '马星', '空亡'],
   compute,
 };
