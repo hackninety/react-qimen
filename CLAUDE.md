@@ -7,7 +7,7 @@ react-qimen —— 奇门遁甲排盘（React 19 + Vite + TypeScript + Tailwind 
 - **语言**：始终用中文与用户对话；代码注释、文档同样用中文。
 - **提交**：commit message 用中文，简洁描述改动。
 - **存档式推送**：每次处理完任务，自动 commit 并推送到主分支 `main`（类似存档），无需询问。
-- **姊妹库**：项目引用同一 GitHub 账号（hackninety）下的 `*-ts-lib` 库（本项目当前为 `qmdj-ts-lib`，git 依赖跟 main 分支）。如任务需要改动这些库，可同步修改并推送到对应仓库。
+- **姊妹库**：`qmdj-ts-lib` 源码统一维护于 `common-ts-lib/packages/qmdj-ts-lib`，前端锁定该仓库的独立 Release 包。如需改库，在 `common-ts-lib` 修改、验证并发布新包，再同步本项目的依赖与锁文件。
 
 ## 常用命令
 

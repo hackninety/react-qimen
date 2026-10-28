@@ -1,33 +1,54 @@
 /**
- * 升级典籍语料库依赖到 qmdj-ts-lib main 最新，并修正 lockfile 的 git 协议。
- *   npm run sync:corpus
- *
- * 背景：依赖跟随 `#main`，但 CI 用 `npm ci` 严格按 lockfile 锁定的 commit，
- * 不会自动拉最新——所以改完语料需跑本脚本刷新 lock 再提交。
- * 另：npm 默认把 GitHub git 依赖的 resolved 写成 `git+ssh://`，而云端 CI
- * 无 SSH 私钥会认证失败，本脚本统一改回 `git+https://`。
+ * 按 common-ts-lib 发布的独立包地址更新 qmdj-ts-lib，并刷新 npm lockfile。
+ *   npm run sync:corpus -- <包地址>
+ *   npm run sync:corpus -- <包地址> --dry-run
+ * 不带地址时使用 package.json 当前锁定的来源，不自动跟随 main 或切换到 npm 同名包。
  */
-import { execSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
-console.log('▶ 拉取 qmdj-ts-lib main 最新…');
-execSync('npm install qmdj-ts-lib --no-fund --no-audit', { stdio: 'inherit' });
+const ROOT = fileURLToPath(new URL('../', import.meta.url));
+const args = process.argv.slice(2);
+const usage = '用法：npm run sync:corpus -- [common-ts-lib 发布的 qmdj-ts-lib 包地址] [--dry-run]';
 
-// npm 会把 spec 规范化为 github: 简写、resolved 写成 git+ssh，统一改回显式 git+https
-for (const file of ['package.json', 'package-lock.json']) {
-  const before = readFileSync(file, 'utf8');
-  const after = before
-    .replaceAll('git+ssh://git@github.com/hackninety/qmdj-ts-lib.git', 'git+https://github.com/hackninety/qmdj-ts-lib.git')
-    .replaceAll('"github:hackninety/qmdj-ts-lib#main"', '"git+https://github.com/hackninety/qmdj-ts-lib.git#main"');
-  if (after !== before) {
-    writeFileSync(file, after);
-    console.log(`✓ ${file} 中 qmdj-ts-lib 源已统一为 git+https`);
-  } else {
-    console.log(`✓ ${file} 已是 git+https`);
-  }
+if (args.includes('--help')) {
+  console.log(usage);
+  process.exit(0);
 }
 
-const lock = readFileSync('package-lock.json', 'utf8');
-const commit = (lock.match(/qmdj-ts-lib\.git#([0-9a-f]{7,40})/) ?? [])[1];
-console.log(`\n完成。当前锁定 commit: ${commit ?? '(未识别)'}`);
-console.log('下一步：npm run build 验证后，提交 package.json 与 package-lock.json 即可触发云端用新语料构建。');
+const dryRun = args.includes('--dry-run');
+const sources = args.filter((arg) => arg !== '--dry-run');
+if (sources.length > 1 || sources.some((arg) => arg.startsWith('-'))) {
+  throw new Error(usage);
+}
+
+const manifest = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+const source = sources[0] ?? manifest.dependencies?.['qmdj-ts-lib'];
+if (!source || /hackninety\/qmdj-ts-lib(?:[.#/]|$)/.test(source)) {
+  throw new Error('请指定 common-ts-lib 发布的 qmdj-ts-lib 包地址；旧独立仓库已迁移。\n' + usage);
+}
+
+console.log(`qmdj-ts-lib 安装来源：${source}`);
+if (dryRun) {
+  console.log('仅预览；未修改依赖或 lockfile。');
+  process.exit(0);
+}
+
+// 使用 npm run 提供的 CLI 路径，不经过 shell，包地址不会被解释为命令。
+const npmCli = process.env.npm_execpath;
+if (!npmCli) {
+  throw new Error('请通过 npm run sync:corpus 执行，以使用当前项目的 npm。');
+}
+const result = spawnSync(process.execPath, [
+  npmCli, 'install', `qmdj-ts-lib@${source}`, '--save-exact', '--no-fund', '--no-audit',
+], { cwd: ROOT, stdio: 'inherit' });
+if (result.error) throw result.error;
+if (result.status !== 0) process.exit(result.status ?? 1);
+
+const lock = JSON.parse(readFileSync(path.join(ROOT, 'package-lock.json'), 'utf8'));
+const installed = lock.packages?.['node_modules/qmdj-ts-lib'];
+if (!installed) throw new Error('安装后 lockfile 缺少 qmdj-ts-lib，请检查 npm 输出。');
+console.log(`完成。版本：${installed.version ?? '(本地链接)'}；来源：${installed.resolved ?? source}`);
+console.log('下一步：npm test && npm run build，验证后提交 package.json 与 package-lock.json。');

@@ -24,7 +24,7 @@
     "lunar-typescript": "^1.8.6",
     "qimen-mingfa": "^1.0.28",
     "qimendunjia-standalone": "^0.1.0",
-    "qmdj-ts-lib": "git+https://github.com/hackninety/qmdj-ts-lib.git#main",
+    "qmdj-ts-lib": "https://github.com/hackninety/common-ts-lib/releases/download/qmdj-ts-lib-v0.2.0/qmdj-ts-lib-0.2.0.tgz",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",

@@ -13,7 +13,7 @@
 - **九宫详解**：每宫星（含辅星别名）/门/神组合、天地盘干、落宫格局、星门神简义
 - **真太阳时**：全国省市区经度库 / 时区自动 / 手动经度三种定位，经度修正 + 均时差（Spencer 公式），修正明细全程可见
 - **导出 & AI**：下载/复制 MD（紧凑省 token）、复制 JSON（完整）、一键 AI Prompt（内嵌盘面与分析框架）；均附排盘口径与地理/时间上下文（地名、经度、时区、真太阳时明细）
-- **典籍库**：内置《奇門遁甲秘笈大全》三十卷+《金函玉鏡》残卷（[qmdj-ts-lib](https://github.com/hackninety/qmdj-ts-lib) 语料库，33 篇 · 796 节），抽屉式阅读 + 全文检索，书卷按需懒加载不占首屏
+- **典籍库**：内置《奇門遁甲秘笈大全》（附《金函玉鏡》残卷）、《遁甲演義》《奇門遁甲統宗》《奇门宝鉴》（[qmdj-ts-lib](https://github.com/hackninety/common-ts-lib/tree/main/packages/qmdj-ts-lib) 独立包），抽屉式阅读 + 全文检索，书卷按需懒加载不占首屏
 - **暗/亮主题**：按时段自动 + 手动切换
 - 跨引擎一致性测试兜底：基准盘由四家独立算法互证，另有 taobi↔3meta 多时辰扫描对照
 
@@ -25,6 +25,12 @@ npm run dev        # http://localhost:6699
 npm test           # 引擎冒烟 + 跨引擎一致性测试
 node scripts/engines-smoke.mjs "2024-06-15T14:30"   # 打印各引擎原始输出
 ```
+
+典籍包由 `common-ts-lib` 单仓库独立发布。升级语料时执行
+`npm run sync:corpus -- <新发布的 qmdj-ts-lib 包地址>`，地址取自
+[qmdj-ts-lib 的独立发布页](https://github.com/hackninety/common-ts-lib/releases/tag/qmdj-ts-lib-v0.2.0)，
+再运行测试与构建，提交更新后的依赖和锁文件。
+附加 `--dry-run` 可先查看安装来源；不传地址会使用 `package.json` 当前来源，不会自动跟随旧仓库 `main`。
 
 ## 文档
 
