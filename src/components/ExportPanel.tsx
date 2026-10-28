@@ -7,6 +7,8 @@ import { chartToMarkdown, chartToToon, type ExportExtra } from '@/utils/export';
 import { generateQimenPrompt } from '@/utils/prompt-template';
 import { copyText } from '@/utils/clipboard';
 import { cn } from '@/utils/cn';
+import { useMingliMode } from '../hooks/useMingliMode';
+import { MingliModePanel } from './MingliModePanel';
 
 interface Props {
   chart: UnifiedQimenChart;
@@ -25,6 +27,7 @@ function formatSize(text: string): string {
 }
 
 export function ExportPanel({ chart, engine, solar, extra }: Props) {
+  const mingliMode = useMingliMode(chart);
   const [copied, setCopied] = useState<CopyKind | null>(null);
 
   const md = useMemo(() => chartToMarkdown(chart, engine, solar, extra), [chart, engine, solar, extra]);
@@ -37,7 +40,9 @@ export function ExportPanel({ chart, engine, solar, extra }: Props) {
     : undefined;
 
   const doCopy = async (kind: CopyKind) => {
-    const text = kind === 'md' ? md : kind === 'toon' ? toon : generateQimenPrompt(md, promptInquiry);
+    const modeTicket = mingliMode.gate.getSnapshot();
+    const text = kind === 'md' ? md : kind === 'toon' ? toon
+      : () => mingliMode.gate.appendReference(generateQimenPrompt(md, promptInquiry), modeTicket);
     if (await copyText(text)) {
       setCopied(kind);
       setTimeout(() => setCopied(null), 2000);
@@ -74,6 +79,8 @@ export function ExportPanel({ chart, engine, solar, extra }: Props) {
           盘面 + 用神定位 + 预计算生克 + 占法古法{extra.refs?.length ? ` + 典籍参考 ${extra.refs.length} 条` : ''}，可按六步法直接推理
         </span>
       </div>
+
+      <MingliModePanel {...mingliMode} />
 
       {/* 数据文件下载 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
