@@ -3,6 +3,30 @@
 奇门遁甲在线排盘。**插件式多引擎架构**：算法层全部来自 npm 开源上游（零 fork），
 通过适配器归一为统一盘面模型，支持流派与定局法一键切换、多家引擎互相验证。
 
+## 在 AI 中使用统一 MCP
+
+支持 MCP 的 AI 客户端可连接 **[https://mcp.0x7c.cc/mcp](https://mcp.0x7c.cc/mcp)**，传输方式选 **Streamable HTTP**，认证选**无**，无需访问令牌。MCP 负责排盘和 common 资料检索，当前 AI 再据此解读；远程调用会把填写的时间等参数发送到该服务。
+
+安装对应 CLI 后，在终端执行其中一条：
+
+```bash
+# Codex
+codex mcp add paipan-common-remote --url https://mcp.0x7c.cc/mcp
+
+# Claude Code（当前用户范围）
+claude mcp add --transport http --scope user paipan-common-remote https://mcp.0x7c.cc/mcp
+```
+
+配置后重新打开客户端会话。已有本机 `paipan-common` 配置时，本机与远程选择一个即可，无需重复添加。命令说明见 [Codex MCP 文档](https://learn.chatgpt.com/docs/extend/mcp)和 [Claude Code MCP 文档](https://code.claude.com/docs/en/mcp)。
+
+连接后可复制以下示例给 AI（请替换成实际起局资料）：
+
+> 请先调用 system_catalog 核对参数，再用 prepare_reading 排奇门（systems=["qimen"]）。起局时间 eventTime 为公历 2026-10-29 14:30，timezone="+08:00"，不启用真太阳时；使用 sanmeta 引擎、时家拆补，研究主题为求财，不开启算命模式。检索 common 的 qmdj 典籍，再用 corpus_read 核对相关原文，标注书名、资料 ID 和来源，区分盘面字段、原典说法与推测。缺少必要参数时先问我。
+
+统一 MCP 当前仅开放 `system="qimen"` 的 **sanmeta 时家拆补底盘**；网页的其他引擎、飞盘、年月日家、占类用神和年命定位辅助分析尚未全部接入。`question` 是研究与检索主题，不是定局参数。`chart_calculate` 的选项直接放 `options`；`prepare_reading` 按系统分组，例如 `options={"qimen":{"engine":"sanmeta","method":"拆补","layer":"时家"}}`。
+
+普通占事必须提供 `eventTime`，不需要无关的生日或性别。时间须明确公历日期、时分和时区（IANA 名或固定偏移，二者在夏令时日期可能不同）；启用真太阳时须明确提供 `eventTime.longitude`，不能由 AI 猜测。common 的奇门典籍由 `qmdj-ts-lib` 提供；只有明确设置 `fortuneMode=true` 并另提供完整 `birth`，才联查人生主题命例，生日不能替代起局时间。默认 `practice` 不读取案例答案；只有明确要求参考答案时，才使用 `corpus_read` 的 `mode="reference"` 与 `includeAnswers=true`。
+
 ## 特性
 
 - **四层盘**：时家（最常用）· 日家 · 月家 · 年家（观一年吉凶）——bigfish / jelly 引擎支持年月日家
@@ -19,7 +43,9 @@
 
 ## 命例参考
 
-在数据导出面板手动开启「算命模式」，再展开「命例库」，可检索人生主题案例。选中「用于 AI 参考」后，AI Prompt 末尾会附上独立命例及来源；纯盘面 MD / TOON 不附加命例。
+在数据导出面板手动开启「算命模式」，再展开「命例库」，可检索人生主题案例。当前使用 `mingli-cases-ts-lib` / `mingli-cases-react` 独立 Release `0.1.1`。点击「用于 AI 参考（不含答案）」会附入独立命例及来源；如需答案，先揭晓，再明确点击「用于 AI 参考（含已揭晓答案）」。隐藏答案会撤销含答案的引用。两种引用均只追加到 AI Prompt，纯盘面 MD / TOON 不附加命例。
+
+案例显示出生资料注记、钟点精度与来源；「钟点未核实」和「区间中点」不能视为已证实的精确出生时刻，也不能直接替当前求测人填表。
 
 开关默认关闭，不记忆开启状态。普通占事不加载命例界面或数据；关闭模式、换盘会清除引用。既有占类、年命与起局时间含义不变，命例不会替代本盘用神、古法或排盘算法，也不能当作当前求测人的经历。
 
