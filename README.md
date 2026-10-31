@@ -29,7 +29,7 @@ claude mcp add --transport http --scope user paipan-common https://mcp.0x7c.cc/m
 
 > 请先调用 system_catalog 核对参数，再用 prepare_reading 排奇门（systems=["qimen"]）。起局时间 eventTime 为公历 2026-10-29 14:30，timezone="+08:00"，不启用真太阳时；使用 sanmeta 引擎、时家拆补，研究主题为求财，不开启算命模式。检索 common 的 qmdj 典籍，再用 corpus_read 核对相关原文，标注书名、资料 ID 和来源，区分盘面字段、原典说法与推测。缺少必要参数时先问我。
 
-统一 MCP 当前仅开放 `system="qimen"` 的 **sanmeta 时家拆补底盘**；网页的其他引擎、飞盘、年月日家、占类用神和年命定位辅助分析尚未全部接入。`question` 是研究与检索主题，不是定局参数。`chart_calculate` 的选项直接放 `options`；`prepare_reading` 按系统分组，例如 `options={"qimen":{"engine":"sanmeta","method":"拆补","layer":"时家"}}`。
+统一 MCP 0.3.x 起 `system="qimen"` 开放全部六个引擎（`options.engine`：sanmeta / bigfish / jelly / taobi / kinqimen / mingfa），以及四层（`layer`：时家 / 日家 / 月家 / 年家）与六种定局法（`method`：拆补 / 茅山 / 置闰 / 均分 / 鸣法 / 固定）中该引擎支持的组合；合法组合与年份范围（jelly 为 1901–2099，其余 1900–2100）以 `system_catalog.families` 中 qimen 的 `engineVariants` 为准。网页的占类用神和年命定位辅助分析仍未接入 MCP。`question` 是研究与检索主题，不是定局参数。`chart_calculate` 的选项直接放 `options`；`prepare_reading` 按系统分组，例如 `options={"qimen":{"engine":"sanmeta","method":"拆补","layer":"时家"}}`。
 
 普通占事必须提供 `eventTime`，不需要无关的生日或性别。时间须明确公历日期、时分和时区（IANA 名或固定偏移，二者在夏令时日期可能不同）；启用真太阳时须明确提供 `eventTime.longitude`，不能由 AI 猜测。common 的奇门典籍由 `qmdj-ts-lib` 提供；只有明确设置 `fortuneMode=true` 并另提供完整 `birth`，才联查人生主题命例，生日不能替代起局时间。默认 `practice` 不读取案例答案；只有明确要求参考答案时，才使用 `corpus_read` 的 `mode="reference"` 与 `includeAnswers=true`。
 
